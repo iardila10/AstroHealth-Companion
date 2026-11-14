@@ -1,4 +1,5 @@
-from typing import Dict, Any
+import logging
+from typing import Dict
 from sqlalchemy.orm import Session
 
 from app.models.measurement import Measurement
@@ -6,18 +7,16 @@ from app.models.alert import Alert
 from app.models.astronaut import Astronaut
 from app.core.rules_engine import rules_engine
 from app.core.recommendation_engine import recommendation_engine
+from app.core.environment_manager import environment_manager
 from app.schemas.evaluation import EvaluationResult
 from app.schemas.measurement import MeasurementCreate
+
+logger = logging.getLogger(__name__)
 
 
 class EvaluationService:
     """
-    Orquesta el flujo completo:
-    1. Guarda la medición
-    2. Ejecuta el Rules Engine
-    3. Genera recomendaciones
-    4. Guarda la Alert
-    5. Devuelve el resultado completo
+    Orquesta el flujo completo de evaluación de salud.
     """
 
     def evaluate_and_save(
@@ -25,12 +24,27 @@ class EvaluationService:
         db: Session,
         measurement_in: MeasurementCreate
     ) -> EvaluationResult:
-        # 1. Verificar que el astronauta existe
+        logger.info(
+            f"Iniciando evaluación | astronaut_id={measurement_in.astronaut_id} "
+            f"| environment={measurement_in.environment}"
+        )
+
+        # 1. Verificar astronauta
         astronaut = db.get(Astronaut, measurement_in.astronaut_id)
         if not astronaut:
+            logger.warning(f"Astronauta no encontrado: id={measurement_in.astronaut_id}")
             raise ValueError(f"Astronauta con id {measurement_in.astronaut_id} no encontrado")
 
-        # 2. Crear y guardar la medición
+        # 2. Verificar entorno
+        available_envs = environment_manager.get_available_environments()
+        if measurement_in.environment not in available_envs:
+            logger.warning(f"Entorno no válido: {measurement_in.environment}")
+            raise ValueError(
+                f"Entorno '{measurement_in.environment}' no soportado. "
+                f"Disponibles: {available_envs}"
+            )
+
+        # 3. Crear medición
         measurement = Measurement(
             astronaut_id=measurement_in.astronaut_id,
             environment=measurement_in.environment,
@@ -44,9 +58,10 @@ class EvaluationService:
             notes=measurement_in.notes,
         )
         db.add(measurement)
-        db.flush()  # Obtenemos el id sin hacer commit todavía
+        db.flush()
+        logger.debug(f"Medición creada | measurement_id={measurement.id}")
 
-        # 3. Preparar datos para el motor de reglas
+        # 4. Datos para el motor
         measurement_data: Dict[str, float | int] = {
             "heart_rate": measurement.heart_rate,
             "blood_pressure_sys": measurement.blood_pressure_sys,
@@ -57,16 +72,20 @@ class EvaluationService:
             "fatigue_level": measurement.fatigue_level,
         }
 
-        # 4. Ejecutar Rules Engine
+        # 5. Rules Engine
         raw_evaluation = rules_engine.evaluate(
             measurement_data=measurement_data,
             environment=measurement.environment
         )
+        logger.info(
+            f"Evaluación completada | status={raw_evaluation['overall_status']} "
+            f"| rules={raw_evaluation['triggered_rules']}"
+        )
 
-        # 5. Generar recomendaciones
+        # 6. Recommendation Engine
         evaluation_result: EvaluationResult = recommendation_engine.generate(raw_evaluation)
 
-        # 6. Crear y guardar la Alert
+        # 7. Guardar Alert
         alert = Alert(
             measurement_id=measurement.id,
             astronaut_id=measurement.astronaut_id,
@@ -83,8 +102,13 @@ class EvaluationService:
         db.refresh(measurement)
         db.refresh(alert)
 
+        logger.info(
+            f"Alerta guardada | alert_id={alert.id} "
+            f"| status={alert.overall_status} "
+            f"| recommendations={len(evaluation_result.recommendations)}"
+        )
+
         return evaluation_result
 
 
-# Instancia para usar en las rutas
 evaluation_service = EvaluationService()

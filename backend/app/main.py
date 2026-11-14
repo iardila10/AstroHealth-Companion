@@ -4,14 +4,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import create_tables
+from app.core.logging_config import setup_logging   # ← nuevo import
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Eventos de arranque y apagado de la aplicación.
-    Aquí creamos las tablas al iniciar (útil en desarrollo).
     """
+    setup_logging()   # ← activamos los logs
     print(f"🚀 Iniciando {settings.APP_NAME} v{settings.APP_VERSION}")
     create_tables()
     print("✅ Tablas de base de datos listas")
@@ -26,10 +27,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS (necesario para el frontend)
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # En producción se restringe
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,7 +39,6 @@ app.add_middleware(
 
 @app.get("/health", tags=["System"])
 def health_check():
-    """Endpoint de salud del sistema."""
     return {
         "status": "ok",
         "app": settings.APP_NAME,
