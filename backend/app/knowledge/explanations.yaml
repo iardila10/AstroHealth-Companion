@@ -1,0 +1,98 @@
+# =========================================================
+# Explicaciones y Recomendaciones
+# Textos claros orientados a astronautas (no médicos)
+# =========================================================
+
+recommendations:
+  REC_CARDIO_01:
+    title: "Reducir carga cardiovascular"
+    priority: 1
+    message: "Tu frecuencia cardíaca y presión arterial están elevadas. Reduce la intensidad de la actividad física y realiza respiraciones lentas y profundas durante 5 minutos."
+    actions:
+      - "Detener ejercicio intenso"
+      - "Respiración 4-7-8 (inhalar 4s, mantener 7s, exhalar 8s)"
+      - "Beber agua si es posible"
+      - "Avisar a Mission Control si no mejora en 15 minutos"
+
+  REC_REST_01:
+    title: "Descanso inmediato"
+    priority: 1
+    message: "Tu cuerpo está mostrando signos de sobrecarga. Es prioritario reducir la demanda física y cognitiva ahora mismo."
+    actions:
+      - "Sentarse o recostarse"
+      - "Reducir estímulos (luz, ruido, pantallas)"
+      - "Hidratación ligera"
+      - "Re-evaluar en 20 minutos"
+
+  REC_SLEEP_01:
+    title: "Recuperar deuda de sueño"
+    priority: 1
+    message: "Has dormido menos de lo recomendado y tu nivel de fatiga es alto. La falta de sueño afecta gravemente la toma de decisiones y el rendimiento cognitivo."
+    actions:
+      - "Priorizar un período de sueño de al menos 90 minutos"
+      - "Evitar cafeína en las próximas 6 horas"
+      - "Usar técnicas de relajación pre-sueño"
+      - "Informar a la tripulación / Mission Control"
+
+  REC_REST_02:
+    title: "Micro-descansos programados"
+    priority: 2
+    message: "Aunque no estés en estado crítico, la combinación de sueño insuficiente y fatiga requiere intervención temprana."
+    actions:
+      - "Hacer pausas de 10 minutos cada 90 minutos de trabajo"
+      - "Realizar estiramientos suaves"
+      - "Revisar carga de trabajo con el comandante"
+
+  REC_GLUCOSE_01:
+    title: "Atención a la glucosa"
+    priority: 2
+    message: "Tus niveles de glucosa están fuera del rango óptimo y se combinan con fatiga. Esto puede afectar tu energía y concentración."
+    actions:
+      - "Consumir una ración ligera de carbohidratos complejos si la glucosa está baja"
+      - "Evitar azúcares simples si está alta"
+      - "Hidratarte"
+      - "Repetir medición en 30-60 minutos"
+
+  REC_TEMP_01:
+    title: "Regulación de temperatura corporal"
+    priority: 1
+    message: "Tu temperatura corporal está fuera del rango seguro. En el entorno espacial esto debe tratarse con prioridad."
+    actions:
+      - "Ajustar la temperatura del traje / ambiente si es posible"
+      - "Añadir o quitar capas de ropa"
+      - "Evitar esfuerzo físico adicional"
+      - "Reportar inmediatamente a Mission Control"
+
+  REC_GENERAL_01:
+    title: "Revisión general de estado"
+    priority: 3
+    message: "Varios indicadores están en zona de atención. Aunque ninguno sea crítico por sí solo, la combinación aumenta el riesgo."
+    actions:
+      - "Realizar un chequeo completo de signos vitales"
+      - "Reducir carga de trabajo no esencial"
+      - "Aumentar frecuencia de monitoreo las próximas 2 horas"
+      - "Documentar síntomas subjetivos (mareo, confusión, debilidad)"
+
+# Explicaciones por indicador (se usan cuando solo hay un problema)
+indicator_explanations:
+  heart_rate:
+    yellow: "Tu frecuencia cardíaca está fuera del rango normal. Puede deberse a esfuerzo, estrés o deshidratación."
+    red: "Frecuencia cardíaca en zona crítica. Requiere atención inmediata."
+  blood_pressure_sys:
+    yellow: "Presión sistólica elevada o baja. Monitorea cómo te sientes."
+    red: "Presión sistólica en rango peligroso."
+  blood_pressure_dia:
+    yellow: "Presión diastólica fuera de rango óptimo."
+    red: "Presión diastólica en zona de riesgo."
+  temperature:
+    yellow: "Temperatura corporal ligeramente alterada."
+    red: "Temperatura corporal en zona crítica (hipotermia o fiebre)."
+  sleep_hours:
+    yellow: "Horas de sueño insuficientes o excesivas. Afecta el rendimiento cognitivo."
+    red: "Deuda de sueño severa. Alto riesgo de errores."
+  glucose:
+    yellow: "Nivel de glucosa fuera del rango ideal."
+    red: "Glucosa en rango crítico. Puede afectar conciencia y energía."
+  fatigue_level:
+    yellow: "Nivel de fatiga moderado. Considera reducir carga."
+    red: "Fatiga alta. Riesgo elevado de errores y disminución de capacidad de respuesta."

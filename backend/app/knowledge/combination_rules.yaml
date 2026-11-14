@@ -1,0 +1,62 @@
+# =========================================================
+# Reglas de combinación
+# Se evalúan después de los umbrales individuales
+# Prioridad: 1 = más alta, 5 = más baja
+# =========================================================
+
+rules:
+  - id: "CARDIO_STRESS"
+    name: "Estrés cardiovascular"
+    description: "Frecuencia cardíaca elevada + presión arterial alta"
+    priority: 1
+    conditions:
+      - indicator: heart_rate
+        status: ["yellow", "red"]
+      - indicator: blood_pressure_sys
+        status: ["yellow", "red"]
+    resulting_status: "red"
+    recommendation_ids: ["REC_CARDIO_01", "REC_REST_01"]
+
+  - id: "FATIGUE_SLEEP_DEBT"
+    name: "Deuda de sueño + fatiga alta"
+    description: "Pocas horas de sueño combinadas con fatiga elevada"
+    priority: 1
+    conditions:
+      - indicator: sleep_hours
+        status: ["yellow", "red"]
+      - indicator: fatigue_level
+        status: ["yellow", "red"]
+    resulting_status: "red"
+    recommendation_ids: ["REC_SLEEP_01", "REC_REST_02"]
+
+  - id: "HYPERGLYCEMIA_RISK"
+    name: "Riesgo de hiperglucemia"
+    description: "Glucosa elevada + fatiga"
+    priority: 2
+    conditions:
+      - indicator: glucose
+        status: ["yellow", "red"]
+      - indicator: fatigue_level
+        status: ["yellow", "red"]
+    resulting_status: "yellow"
+    recommendation_ids: ["REC_GLUCOSE_01"]
+
+  - id: "HYPOTHERMIA_RISK"
+    name: "Riesgo de hipotermia"
+    description: "Temperatura baja + fatiga alta"
+    priority: 1
+    conditions:
+      - indicator: temperature
+        status: ["yellow", "red"]
+      - indicator: fatigue_level
+        status: ["red"]
+    resulting_status: "red"
+    recommendation_ids: ["REC_TEMP_01", "REC_REST_01"]
+
+  - id: "MULTIPLE_YELLOW"
+    name: "Múltiples indicadores en atención"
+    description: "3 o más indicadores en estado amarillo"
+    priority: 3
+    min_yellow_count: 3
+    resulting_status: "yellow"
+    recommendation_ids: ["REC_GENERAL_01"]

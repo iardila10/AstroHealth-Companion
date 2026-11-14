@@ -1,0 +1,80 @@
+# =========================================================
+# AstroHealth Companion - Thresholds
+# Umbrales por indicador y por entorno
+# Verde = Normal | Amarillo = Atención | Rojo = Crítico
+# =========================================================
+
+environments:
+  spacecraft:
+    heart_rate: # bpm
+      green:  { min: 60,  max: 100 }
+      yellow: { min: 50,  max: 59,  min2: 101, max2: 120 }
+      red:    { min: null, max: 49,  min2: 121, max2: null }
+
+    blood_pressure_sys: # mmHg
+      green:  { min: 90,  max: 120 }
+      yellow: { min: 121, max: 139, min2: 80,  max2: 89 }
+      red:    { min: 140, max: null, min2: null, max2: 79 }
+
+    blood_pressure_dia: # mmHg
+      green:  { min: 60,  max: 80 }
+      yellow: { min: 81,  max: 89,  min2: 50,  max2: 59 }
+      red:    { min: 90,  max: null, min2: null, max2: 49 }
+
+    temperature: # °C
+      green:  { min: 36.1, max: 37.2 }
+      yellow: { min: 37.3, max: 38.0, min2: 35.5, max2: 36.0 }
+      red:    { min: 38.1, max: null, min2: null, max2: 35.4 }
+
+    sleep_hours:
+      green:  { min: 7.0, max: 9.0 }
+      yellow: { min: 5.0, max: 6.9, min2: 9.1, max2: 10.0 }
+      red:    { min: null, max: 4.9, min2: 10.1, max2: null }
+
+    glucose: # mg/dL
+      green:  { min: 70,  max: 99 }
+      yellow: { min: 100, max: 125, min2: 55,  max2: 69 }
+      red:    { min: 126, max: null, min2: null, max2: 54 }
+
+    fatigue_level: # 1-10
+      green:  { min: 1,   max: 3 }
+      yellow: { min: 4,   max: 6 }
+      red:    { min: 7,   max: 10 }
+
+  lunar_base:
+    # En la Luna aumentamos ligeramente la sensibilidad
+    # por menor gravedad, polvo lunar y mayor carga cognitiva
+    heart_rate:
+      green:  { min: 58,  max: 98 }
+      yellow: { min: 48,  max: 57,  min2: 99,  max2: 118 }
+      red:    { min: null, max: 47,  min2: 119, max2: null }
+
+    blood_pressure_sys:
+      green:  { min: 88,  max: 118 }
+      yellow: { min: 119, max: 135, min2: 78,  max2: 87 }
+      red:    { min: 136, max: null, min2: null, max2: 77 }
+
+    blood_pressure_dia:
+      green:  { min: 58,  max: 78 }
+      yellow: { min: 79,  max: 88,  min2: 48,  max2: 57 }
+      red:    { min: 89,  max: null, min2: null, max2: 47 }
+
+    temperature:
+      green:  { min: 36.0, max: 37.1 }
+      yellow: { min: 37.2, max: 37.9, min2: 35.4, max2: 35.9 }
+      red:    { min: 38.0, max: null, min2: null, max2: 35.3 }
+
+    sleep_hours:
+      green:  { min: 7.0, max: 9.0 }
+      yellow: { min: 5.5, max: 6.9, min2: 9.1, max2: 9.8 }
+      red:    { min: null, max: 5.4, min2: 9.9, max2: null }
+
+    glucose:
+      green:  { min: 70,  max: 99 }
+      yellow: { min: 100, max: 120, min2: 58,  max2: 69 }
+      red:    { min: 121, max: null, min2: null, max2: 57 }
+
+    fatigue_level:
+      green:  { min: 1,   max: 3 }
+      yellow: { min: 4,   max: 5 }
+      red:    { min: 6,   max: 10 }
