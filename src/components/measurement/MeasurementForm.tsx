@@ -1,241 +1,257 @@
-import { useState } from "react";
-import { useHealthStore } from "../../stores/useHealthStore";
-import { useAstronautStore } from "../../stores/useAstronautStore";
-import { useUIStore } from "../../stores/useUIStore";
-import type { MeasurementInput, Environment } from "../../types/health";
-import { submitMeasurement, mapEvaluationToSnapshot } from "../../services/healthService";
-import { X } from "lucide-react";
+import { useEffect, useState, type SubmitEvent } from "react";
+import X from "lucide-react/icons/x";
+import type { Environment, MeasurementInput } from "../../types/health";
+import {
+  submitMeasurement,
+  type MeasurementCreatePayload,
+} from "../../services/healthService";
 
-export const MeasurementForm = () => {
-  const { isMeasurementFormOpen, closeMeasurementForm } = useUIStore();
-  const currentEnvironment = useAstronautStore((s) => s.currentEnvironment);
-  const astronaut = useAstronautStore((s) => s.astronaut);
+interface MeasurementFormProps {
+  astronautId: number;
+  environment: Environment;
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmitted: (synced: boolean) => void;
+}
 
-  const setLoading = useHealthStore((s) => s.setLoading);
-  const setError = useHealthStore((s) => s.setError);
-  const setSnapshot = useHealthStore((s) => s.setSnapshot);
-  const addToHistory = useHealthStore((s) => s.addToHistory);
+type NumericMeasurementField = Exclude<
+  keyof MeasurementInput,
+  "environment" | "notes"
+>;
 
+const numericFields: NumericMeasurementField[] = [
+  "heart_rate",
+  "temperature",
+  "blood_pressure_sys",
+  "blood_pressure_dia",
+  "glucose",
+  "sleep_hours",
+];
+
+export const MeasurementForm = ({
+  astronautId,
+  environment,
+  isOpen,
+  onClose,
+  onSubmitted,
+}: MeasurementFormProps) => {
   const [formData, setFormData] = useState<Partial<MeasurementInput>>({
-    environment: currentEnvironment,
+    environment,
+    fatigue_level: 5,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!isMeasurementFormOpen) return null;
+  useEffect(() => {
+    setFormData({ environment, fatigue_level: 5 });
+    setError(null);
+  }, [astronautId, environment]);
 
-  const handleChange = (field: keyof MeasurementInput, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
+  if (!isOpen) return null;
+
+  const handleChange = (field: NumericMeasurementField, value: string) => {
+    setFormData((previous) => ({
+      ...previous,
       [field]: value === "" ? undefined : Number(value),
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError(null);
 
-    try {
-      if (!astronaut?.id) {
-        throw new Error("No astronaut selected. Create one first.");
-      }
+    const requiredValues = numericFields.map((field) => formData[field]);
+    if (
+      requiredValues.some(
+        (value) => typeof value !== "number" || !Number.isFinite(value)
+      )
+    ) {
+      setError("Completa todos los valores de la medición.");
+      return;
+    }
 
-      const payload = {
-        astronaut_id: Number(astronaut.id),
-        environment: (formData.environment ?? currentEnvironment) as Environment,
-        heart_rate: Number(formData.heart_rate),
-        blood_pressure_sys: Number(formData.blood_pressure_sys),
-        blood_pressure_dia: Number(formData.blood_pressure_dia),
-        temperature: Number(formData.temperature),
-        sleep_hours: Number(formData.sleep_hours),
-        glucose: Number(formData.glucose),
-        fatigue_level: Number(formData.fatigue_level ?? 5),
-        notes: formData.notes,
+    if (
+      (formData.blood_pressure_sys ?? 0) <=
+      (formData.blood_pressure_dia ?? 0)
+    ) {
+      setError("La presión sistólica debe ser mayor que la diastólica.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload: MeasurementCreatePayload = {
+        astronaut_id: astronautId,
+        environment: formData.environment ?? environment,
+        heart_rate: formData.heart_rate!,
+        temperature: formData.temperature!,
+        blood_pressure_sys: formData.blood_pressure_sys!,
+        blood_pressure_dia: formData.blood_pressure_dia!,
+        glucose: formData.glucose!,
+        sleep_hours: formData.sleep_hours!,
+        fatigue_level: formData.fatigue_level ?? 5,
+        notes: formData.notes?.trim() || undefined,
       };
 
-      const result = await submitMeasurement(payload);
-      const snapshot = mapEvaluationToSnapshot(result, String(astronaut.id));
-
-      setSnapshot(snapshot);
-      addToHistory(snapshot);
-
-      closeMeasurementForm();
-      setFormData({ environment: currentEnvironment });
-    } catch (err) {
-      console.error("Failed to submit measurement:", err);
+      const submission = await submitMeasurement(payload);
+      onClose();
+      onSubmitted(submission.synced);
+      setFormData({ environment, fatigue_level: 5 });
+    } catch (cause) {
       setError(
-        err instanceof Error ? err.message : "Failed to submit measurement"
+        cause instanceof Error
+          ? cause.message
+          : "No se pudo guardar la medición."
       );
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+  const numberInput = (
+    field: NumericMeasurementField,
+    label: string,
+    min: number,
+    max: number,
+    step = "1"
+  ) => (
+    <div>
+      <label
+        htmlFor={field}
+        className="mb-1.5 block text-xs font-medium text-[#94A3B8]"
+      >
+        {label}
+      </label>
+      <input
+        id={field}
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        required
+        value={formData[field] ?? ""}
+        onChange={(event) => handleChange(field, event.target.value)}
+        className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-3 py-2 text-sm text-[#F8FAFC] focus:border-[#22D3EE] focus:outline-none tabular-nums"
+      />
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#1E293B] border border-[#334155] rounded-xl w-full max-w-lg shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#334155]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-xl border border-[#334155] bg-[#1E293B] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[#334155] px-6 py-4">
           <h2 className="text-lg font-semibold text-[#F8FAFC]">
-            New Measurement
+            Nueva medición
           </h2>
           <button
-            onClick={closeMeasurementForm}
-            className="p-1.5 rounded-md hover:bg-[#334155] text-[#94A3B8] hover:text-[#F8FAFC]"
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar formulario"
+            className="rounded-md p-1.5 text-[#94A3B8] hover:bg-[#334155] hover:text-[#F8FAFC]"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5 p-6">
           <div className="grid grid-cols-2 gap-4">
-            {/* Heart Rate */}
-            <div>
-              <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
-                Heart Rate (bpm)
-              </label>
-              <input
-                type="number"
-                value={formData.heart_rate ?? ""}
-                onChange={(e) => handleChange("heart_rate", e.target.value)}
-                className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 text-sm text-[#F8FAFC] focus:outline-none focus:border-[#22D3EE] tabular-nums"
-                placeholder="72"
-              />
-            </div>
-
-            {/* Temperature */}
-            <div>
-              <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
-                Temperature (°C)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                value={formData.temperature ?? ""}
-                onChange={(e) => handleChange("temperature", e.target.value)}
-                className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 text-sm text-[#F8FAFC] focus:outline-none focus:border-[#22D3EE] tabular-nums"
-                placeholder="36.6"
-              />
-            </div>
-
-            {/* Systolic */}
-            <div>
-              <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
-                Systolic (mmHg)
-              </label>
-              <input
-                type="number"
-                value={formData.blood_pressure_sys ?? ""}
-                onChange={(e) =>
-                  handleChange("blood_pressure_sys", e.target.value)
-                }
-                className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 text-sm text-[#F8FAFC] focus:outline-none focus:border-[#22D3EE] tabular-nums"
-                placeholder="120"
-              />
-            </div>
-
-            {/* Diastolic */}
-            <div>
-              <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
-                Diastolic (mmHg)
-              </label>
-              <input
-                type="number"
-                value={formData.blood_pressure_dia ?? ""}
-                onChange={(e) =>
-                  handleChange("blood_pressure_dia", e.target.value)
-                }
-                className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 text-sm text-[#F8FAFC] focus:outline-none focus:border-[#22D3EE] tabular-nums"
-                placeholder="80"
-              />
-            </div>
-
-            {/* Glucose */}
-            <div>
-              <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
-                Glucose (mg/dL)
-              </label>
-              <input
-                type="number"
-                value={formData.glucose ?? ""}
-                onChange={(e) => handleChange("glucose", e.target.value)}
-                className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 text-sm text-[#F8FAFC] focus:outline-none focus:border-[#22D3EE] tabular-nums"
-                placeholder="95"
-              />
-            </div>
-
-            {/* Sleep Hours */}
-            <div>
-              <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
-                Sleep Hours
-              </label>
-              <input
-                type="number"
-                step="0.5"
-                value={formData.sleep_hours ?? ""}
-                onChange={(e) => handleChange("sleep_hours", e.target.value)}
-                className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 text-sm text-[#F8FAFC] focus:outline-none focus:border-[#22D3EE] tabular-nums"
-                placeholder="7.5"
-              />
-            </div>
+            {numberInput("heart_rate", "Frecuencia cardíaca (bpm)", 31, 219)}
+            {numberInput("temperature", "Temperatura (°C)", 34.1, 41.9, "0.1")}
+            {numberInput("blood_pressure_sys", "Presión sistólica (mmHg)", 71, 219)}
+            {numberInput("blood_pressure_dia", "Presión diastólica (mmHg)", 41, 139)}
+            {numberInput("glucose", "Glucosa (mg/dL)", 41, 399)}
+            {numberInput("sleep_hours", "Horas de sueño", 0, 16, "0.5")}
           </div>
 
-          {/* Fatigue Level */}
           <div>
-            <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
-              Fatigue Level (1-10)
+            <label
+              htmlFor="fatigue_level"
+              className="mb-1.5 block text-xs font-medium text-[#94A3B8]"
+            >
+              Nivel de fatiga (1-10)
             </label>
             <input
+              id="fatigue_level"
               type="range"
               min="1"
               max="10"
               value={formData.fatigue_level ?? 5}
-              onChange={(e) => handleChange("fatigue_level", e.target.value)}
+              onChange={(event) => handleChange("fatigue_level", event.target.value)}
               className="w-full accent-[#22D3EE]"
             />
-            <div className="flex justify-between text-xs text-[#64748B] mt-1">
-              <span>1 - Low</span>
-              <span className="text-[#F8FAFC] font-medium tabular-nums">
+            <div className="flex justify-between text-xs text-[#64748B]">
+              <span>1 - Baja</span>
+              <span className="font-medium text-[#F8FAFC]">
                 {formData.fatigue_level ?? 5}
               </span>
-              <span>10 - High</span>
+              <span>10 - Alta</span>
             </div>
           </div>
 
-          {/* Environment */}
           <div>
-            <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">
-              Environment
+            <label
+              htmlFor="environment"
+              className="mb-1.5 block text-xs font-medium text-[#94A3B8]"
+            >
+              Entorno
             </label>
             <select
-              value={formData.environment}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  environment: e.target.value as Environment,
+              id="environment"
+              value={formData.environment ?? environment}
+              onChange={(event) =>
+                setFormData((previous) => ({
+                  ...previous,
+                  environment: event.target.value as Environment,
                 }))
               }
-              className="w-full bg-[#0F172A] border border-[#334155] rounded-lg px-3 py-2 text-sm text-[#F8FAFC] focus:outline-none focus:border-[#22D3EE]"
+              className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-3 py-2 text-sm text-[#F8FAFC] focus:border-[#22D3EE] focus:outline-none"
             >
-              <option value="spacecraft">Spacecraft</option>
-              <option value="lunar_base">Lunar Base</option>
+              <option value="spacecraft">Nave espacial</option>
+              <option value="lunar_base">Base lunar</option>
             </select>
           </div>
 
-          {/* Actions */}
+          <div>
+            <label
+              htmlFor="notes"
+              className="mb-1.5 block text-xs font-medium text-[#94A3B8]"
+            >
+              Notas (opcional)
+            </label>
+            <textarea
+              id="notes"
+              maxLength={500}
+              value={formData.notes ?? ""}
+              onChange={(event) =>
+                setFormData((previous) => ({
+                  ...previous,
+                  notes: event.target.value,
+                }))
+              }
+              className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-3 py-2 text-sm text-[#F8FAFC] focus:border-[#22D3EE] focus:outline-none"
+            />
+          </div>
+
+          {error && (
+            <p role="alert" className="text-sm text-rose-300">
+              {error}
+            </p>
+          )}
+
           <div className="flex gap-3 pt-2">
             <button
               type="button"
-              onClick={closeMeasurementForm}
-              className="flex-1 px-4 py-2.5 rounded-lg border border-[#334155] text-sm font-medium text-[#94A3B8] hover:bg-[#334155] transition-colors"
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-[#334155] px-4 py-2.5 text-sm font-medium text-[#94A3B8] hover:bg-[#334155]"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 rounded-lg bg-[#22D3EE] text-[#0F172A] text-sm font-semibold hover:bg-[#38BDF8] transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 rounded-lg bg-[#22D3EE] px-4 py-2.5 text-sm font-semibold text-[#0F172A] hover:bg-[#38BDF8] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Submit Measurement
+              {isSubmitting ? "Guardando..." : "Guardar medición"}
             </button>
           </div>
         </form>

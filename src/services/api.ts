@@ -1,5 +1,22 @@
 
-const API_URL = "http://localhost:8000";
+const configuredApiUrl =
+  import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_URL = (
+  configuredApiUrl.startsWith("http://") ||
+  configuredApiUrl.startsWith("https://")
+    ? configuredApiUrl
+    : `https://${configuredApiUrl}`
+).replace(/\/$/, "");
+
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
 
 // Main function for handling HTTP requests
 async function apiRequest<T>(
@@ -19,49 +36,57 @@ async function apiRequest<T>(
     }
   );
 
-  // Check for request errors
   if (!response.ok) {
-    throw new Error(
-      `Request failed: ${response.status} - ${response.statusText}`
+    const body = await response.text();
+    let detail = body;
+
+    if (body) {
+      try {
+        const parsed = JSON.parse(body) as { detail?: unknown };
+        detail =
+          typeof parsed.detail === "string"
+            ? parsed.detail
+            : parsed.detail === undefined
+              ? body
+              : JSON.stringify(parsed.detail);
+      } catch {
+        detail = body;
+      }
+    }
+
+    throw new ApiRequestError(
+      detail || `Request failed: ${response.status} - ${response.statusText}`,
+      response.status
     );
   }
 
-  // Handle empty responses
   if (response.status === 204) {
     return undefined as T;
   }
 
-  // Parse JSON response
-  return await response.json() as T;
+  return (await response.json()) as T;
 }
 
-// HTTP methods
 const api = {
-
-  // GET: Retrieve data
   get: <T>(endpoint: string) =>
     apiRequest<T>(endpoint),
 
-  // POST: Send new data
   post: <T>(endpoint: string, data: unknown) =>
     apiRequest<T>(endpoint, {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  // PUT: Update existing data
   put: <T>(endpoint: string, data: unknown) =>
     apiRequest<T>(endpoint, {
       method: "PUT",
       body: JSON.stringify(data),
     }),
 
-  // DELETE: Remove data
   delete: <T>(endpoint: string) =>
     apiRequest<T>(endpoint, {
       method: "DELETE",
     }),
-
 };
 
 export default api;

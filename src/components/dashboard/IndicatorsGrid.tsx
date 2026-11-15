@@ -1,10 +1,10 @@
 
-type HealthStatus = "normal" | "warning" | "critical" | "unknown";
+import type { HealthStatus } from "../../types/health";
 
 type HealthIndicator = {
   id: string;
   label: string;
-  value: number | null;
+  value: number | string | null;
   unit: string;
   status: HealthStatus;
 };
@@ -27,20 +27,20 @@ function IndicatorsGrid({ indicators }: IndicatorsGridProps) {
       background: "bg-emerald-500/10",
       border: "border-emerald-500/30",
     },
-    warning: {
-      label: "ATTENTION",
+    attention: {
+      label: "ATENCIÓN",
       color: "text-amber-400",
       background: "bg-amber-500/10",
       border: "border-amber-500/30",
     },
     critical: {
-      label: "CRITICAL",
+      label: "CRÍTICO",
       color: "text-rose-400",
       background: "bg-rose-500/10",
       border: "border-rose-500/30",
     },
-    unknown: {
-      label: "NO DATA",
+    no_data: {
+      label: "SIN DATOS",
       color: "text-slate-400",
       background: "bg-slate-500/10",
       border: "border-slate-500/30",

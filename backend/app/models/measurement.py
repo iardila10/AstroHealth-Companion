@@ -42,3 +42,14 @@ class Measurement(Base):
 
     def __repr__(self) -> str:
         return f"<Measurement id={self.id} astronaut_id={self.astronaut_id} env={self.environment}>"
+
+
+class MeasurementSyncKey(Base):
+    __tablename__ = "measurement_sync_keys"
+
+    client_measurement_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    measurement_id: Mapped[int] = mapped_column(
+        ForeignKey("measurements.id"),
+        unique=True,
+        nullable=False,
+    )

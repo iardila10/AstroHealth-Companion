@@ -1,5 +1,5 @@
 
-    type AlertSeverity = "normal" | "warning" | "critical";
+    type AlertSeverity = "attention" | "critical";
 
     interface HealthAlert {
     id: string;
@@ -22,20 +22,14 @@
         background: string;
         border: string;
     }> = {
-        normal: {
-        label: "NORMAL",
-        color: "text-emerald-400",
-        background: "bg-emerald-500/10",
-        border: "border-emerald-500/30",
-        },
-        warning: {
-        label: "ATTENTION",
+        attention: {
+        label: "ATENCIÓN",
         color: "text-amber-400",
         background: "bg-amber-500/10",
         border: "border-amber-500/30",
         },
         critical: {
-        label: "CRITICAL",
+        label: "CRÍTICO",
         color: "text-rose-400",
         background: "bg-rose-500/10",
         border: "border-rose-500/30",
@@ -112,7 +106,7 @@
                         className={`h-2.5 w-2.5 rounded-full ${
                             alert.severity === "critical"
                             ? "bg-rose-400"
-                            : alert.severity === "warning"
+                            : alert.severity === "attention"
                             ? "bg-amber-400"
                             : "bg-emerald-400"
                         }`}
