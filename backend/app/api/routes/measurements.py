@@ -45,7 +45,7 @@ def list_measurements(
     query = db.query(Measurement)
     if astronaut_id is not None:
         query = query.filter(Measurement.astronaut_id == astronaut_id)
-    return query.order_by(Measurement.recorded_at.desc()).limit(limit).all()
+    return query.order_by(Measurement.id.desc()).limit(limit).all()
 
 
 @router.get("/{measurement_id}", response_model=MeasurementRead)

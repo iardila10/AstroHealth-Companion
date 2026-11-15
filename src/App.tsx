@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AlertsPanel from "./components/dashboard/AlertsPanel";
 import IndicatorsGrid from "./components/dashboard/IndicatorsGrid";
 import SensorBodyMap from "./components/dashboard/SensorBodyMap";
@@ -6,12 +6,16 @@ import TrendCard from "./components/dashboard/TrendCard";
 import { MeasurementForm } from "./components/measurement/MeasurementForm";
 import {
   createAstronaut,
+  acknowledgeEvaluation,
+  checkApiConnection,
+  generateDemoTick,
   getEvaluations,
   listAstronauts,
   listMeasurements,
   mapStatus,
   syncQueuedMeasurements,
   type Astronaut,
+  type DemoProfile,
   type EvaluationRecord,
   type MeasurementRecord,
 } from "./services/healthService";
@@ -37,6 +41,23 @@ const statusLabels: Record<HealthStatus, string> = {
   no_data: "ESPERANDO DATOS",
 };
 
+const sensorKeyByIndicator: Record<string, IndicatorKey> = {
+  heart_rate: "heart_rate",
+  blood_pressure_sys: "blood_pressure",
+  blood_pressure_dia: "blood_pressure",
+  temperature: "temperature",
+  sleep_hours: "sleep_hours",
+  glucose: "glucose",
+  fatigue_level: "fatigue_level",
+};
+
+const healthStatusPriority: Record<HealthStatus, number> = {
+  no_data: 0,
+  normal: 1,
+  attention: 2,
+  critical: 3,
+};
+
 function formatDate(value?: string | null): string {
   if (!value) return "Sin datos";
   const date = new Date(value);
@@ -54,9 +75,7 @@ function App() {
   const [loadingData, setLoadingData] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(
-    () => typeof navigator === "undefined" || navigator.onLine
-  );
+  const [isApiAvailable, setIsApiAvailable] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [isMeasurementFormOpen, setIsMeasurementFormOpen] = useState(false);
@@ -64,6 +83,16 @@ function App() {
   const [astronautName, setAstronautName] = useState("");
   const [astronautRole, setAstronautRole] = useState("");
   const [isCreatingAstronaut, setIsCreatingAstronaut] = useState(false);
+  const [isSimulatorRunning, setIsSimulatorRunning] = useState(false);
+  const [simulatorProfile, setSimulatorProfile] =
+    useState<DemoProfile>("normal");
+  const [simulatorError, setSimulatorError] = useState<string | null>(null);
+  const [alertBaselineId, setAlertBaselineId] = useState(0);
+  const [acknowledgingAlertId, setAcknowledgingAlertId] = useState<number | null>(
+    null
+  );
+  const [alertActionError, setAlertActionError] = useState<string | null>(null);
+  const acknowledgedAlertIds = useRef(new Set<number>());
 
   useEffect(() => {
     let active = true;
@@ -74,15 +103,16 @@ function App() {
     };
 
     const handleOffline = () => {
-      setIsOnline(false);
       setSyncMessage(
-        "Sin conexión: las nuevas mediciones se guardarán en este dispositivo."
+        "Sin Internet: se intentará usar la API local; si no responde, los datos quedan pendientes en este dispositivo."
       );
     };
 
     const handleOnline = async () => {
-      setIsOnline(true);
-      setSyncMessage("Conexión disponible. Sincronizando mediciones...");
+      const networkAvailable = navigator.onLine;
+      if (networkAvailable) {
+        setSyncMessage("Conexión disponible. Sincronizando mediciones...");
+      }
 
       try {
         const syncedCount = await syncQueuedMeasurements();
@@ -90,7 +120,7 @@ function App() {
         if (syncedCount > 0) {
           setRefreshToken((token) => token + 1);
           setSyncMessage(`${syncedCount} medición(es) sincronizada(s).`);
-        } else {
+        } else if (networkAvailable) {
           setSyncMessage(null);
         }
       } catch (cause) {
@@ -108,9 +138,9 @@ function App() {
     window.addEventListener("online", handleOnline);
     window.addEventListener("focus", handleOnline);
     const retryInterval = window.setInterval(() => {
-      if (navigator.onLine) void handleOnline();
+      void handleOnline();
     }, 30_000);
-    if (navigator.onLine) void handleOnline();
+    void handleOnline();
 
     return () => {
       active = false;
@@ -118,6 +148,21 @@ function App() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("focus", handleOnline);
       window.clearInterval(retryInterval);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const checkConnection = async () => {
+      const available = await checkApiConnection();
+      if (active) setIsApiAvailable(available);
+    };
+
+    void checkConnection();
+    const interval = window.setInterval(() => void checkConnection(), 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
     };
   }, []);
 
@@ -157,10 +202,10 @@ function App() {
     }
 
     let active = true;
-    setLoadingData(true);
+    if (measurements.length === 0 && evaluations.length === 0) {
+      setLoadingData(true);
+    }
     setError(null);
-    setMeasurements([]);
-    setEvaluations([]);
 
     Promise.all([
       listMeasurements(selectedAstronautId),
@@ -169,7 +214,13 @@ function App() {
       .then(([measurementItems, evaluationItems]) => {
         if (!active) return;
         setMeasurements(measurementItems);
-        setEvaluations(evaluationItems);
+        setEvaluations(
+          evaluationItems.map((evaluation) =>
+            acknowledgedAlertIds.current.has(evaluation.id)
+              ? { ...evaluation, acknowledged: true }
+              : evaluation
+          )
+        );
       })
       .catch((cause: unknown) => {
         if (active) {
@@ -193,9 +244,32 @@ function App() {
   const latestEvaluation = evaluations.find(
     (evaluation) => evaluation.measurement_id === latestMeasurement?.id
   );
-  const activeAlerts = evaluations.filter(
-    (evaluation) =>
-      !evaluation.acknowledged && evaluation.overall_status !== "green"
+  const seenAlertPatterns = new Set<string>();
+  const recentAlertsByPattern = new Map<string, EvaluationRecord>();
+  [...evaluations]
+    .sort((a, b) => b.id - a.id)
+    .forEach((evaluation) => {
+      if (
+        evaluation.id <= alertBaselineId ||
+        evaluation.overall_status === "green"
+      ) {
+        return;
+      }
+
+      const pattern = Object.entries(evaluation.indicator_statuses)
+        .filter(([, indicator]) => indicator.status !== "green")
+        .map(([indicator]) => indicator)
+        .sort()
+        .join("|");
+      if (!pattern || seenAlertPatterns.has(pattern)) return;
+
+      seenAlertPatterns.add(pattern);
+      if (!evaluation.acknowledged) {
+        recentAlertsByPattern.set(pattern, evaluation);
+      }
+    });
+  const recentAlerts = [...recentAlertsByPattern.entries()].sort(
+    ([patternA], [patternB]) => patternA.localeCompare(patternB)
   );
   const selectedAstronaut = astronauts.find(
     (astronaut) => astronaut.id === selectedAstronautId
@@ -280,10 +354,11 @@ function App() {
     [measurements]
   );
 
-  const alerts = activeAlerts.map((evaluation) => {
+  const alerts = recentAlerts.map(([key, evaluation]) => {
     const recommendation = evaluation.recommendations[0];
     return {
-      id: String(evaluation.id),
+      key,
+      id: evaluation.id,
       title: recommendation?.title ?? "Alerta de salud",
       message: evaluation.summary || "Un indicador de salud requiere atención.",
       severity:
@@ -299,6 +374,31 @@ function App() {
     };
   });
 
+  const handleAcknowledgeAlert = async (alertId: number) => {
+    setAcknowledgingAlertId(alertId);
+    setAlertActionError(null);
+
+    try {
+      await acknowledgeEvaluation(alertId);
+      acknowledgedAlertIds.current.add(alertId);
+      setEvaluations((current) =>
+        current.map((evaluation) =>
+          evaluation.id === alertId
+            ? { ...evaluation, acknowledged: true }
+            : evaluation
+        )
+      );
+    } catch (cause) {
+      setAlertActionError(
+        cause instanceof Error
+          ? cause.message
+          : "No se pudo marcar la alerta como realizada."
+      );
+    } finally {
+      setAcknowledgingAlertId(null);
+    }
+  };
+
   const handleCreateAstronaut = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
@@ -313,6 +413,9 @@ function App() {
         current_environment: "spacecraft",
       });
       setAstronauts((current) => [...current, astronaut]);
+      setMeasurements([]);
+      setEvaluations([]);
+      setAlertBaselineId(0);
       setSelectedAstronautId(astronaut.id);
       setAstronautName("");
       setAstronautRole("");
@@ -328,27 +431,75 @@ function App() {
     }
   };
 
-  const connectionStatus = !isOnline
-    ? "Sin conexión"
-    : loadingAstronauts
-      ? "Conectando..."
-      : error
-        ? "Error de sincronización"
-        : "En línea";
+  const connectionStatus = isApiAvailable
+    ? "API local activa"
+    : "API local desconectada";
   const environment: Environment =
     latestMeasurement?.environment ??
     selectedAstronaut?.current_environment ??
     "spacecraft";
+  useEffect(() => {
+    if (!isSimulatorRunning || selectedAstronautId === null) return;
+
+    let active = true;
+    let timer: number | undefined;
+
+    const tick = async () => {
+      try {
+        await generateDemoTick(
+          selectedAstronautId,
+          environment,
+          simulatorProfile
+        );
+        if (!active) return;
+        setSimulatorError(null);
+        setRefreshToken((token) => token + 1);
+        timer = window.setTimeout(() => void tick(), 2500);
+      } catch (cause) {
+        if (!active) return;
+        setSimulatorError(
+          cause instanceof Error
+            ? cause.message
+            : "No se pudo generar la lectura simulada."
+        );
+        setIsSimulatorRunning(false);
+      }
+    };
+
+    void tick();
+    return () => {
+      active = false;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [
+    environment,
+    isSimulatorRunning,
+    selectedAstronautId,
+    simulatorProfile,
+  ]);
+  const normalSensorStatus: HealthStatus = latestMeasurement ? "normal" : "no_data";
   const sensorStatuses: Partial<Record<IndicatorKey, HealthStatus>> = {
-    heart_rate: mapStatus(latestEvaluation?.indicator_statuses.heart_rate?.status),
-    blood_pressure:
-      indicators.find((indicator) => indicator.id === "blood-pressure")?.status ??
-      "no_data",
-    temperature: mapStatus(latestEvaluation?.indicator_statuses.temperature?.status),
-    sleep_hours: mapStatus(latestEvaluation?.indicator_statuses.sleep_hours?.status),
-    glucose: mapStatus(latestEvaluation?.indicator_statuses.glucose?.status),
-    fatigue_level: mapStatus(latestEvaluation?.indicator_statuses.fatigue_level?.status),
+    heart_rate: normalSensorStatus,
+    blood_pressure: normalSensorStatus,
+    temperature: normalSensorStatus,
+    sleep_hours: normalSensorStatus,
+    glucose: normalSensorStatus,
+    fatigue_level: normalSensorStatus,
   };
+  recentAlerts.forEach(([, evaluation]) => {
+    Object.entries(evaluation.indicator_statuses).forEach(
+      ([indicatorKey, indicator]) => {
+        const sensorKey = sensorKeyByIndicator[indicatorKey];
+        if (!sensorKey || indicator.status === "green") return;
+
+        const status = mapStatus(indicator.status);
+        const currentStatus = sensorStatuses[sensorKey] ?? "no_data";
+        if (healthStatusPriority[status] > healthStatusPriority[currentStatus]) {
+          sensorStatuses[sensorKey] = status;
+        }
+      }
+    );
+  });
   const heartRateValues = history.map((point) => point.heart_rate);
   const glucoseValues = history.map((point) => point.glucose);
 
@@ -394,7 +545,7 @@ function App() {
         </nav>
 
         <div className="sidebar-footer">
-          <span className={`connection-light ${isOnline ? "is-online" : ""}`} />
+          <span className={`connection-light ${isApiAvailable ? "is-online" : ""}`} />
           <span>{connectionStatus}</span>
           {pendingCount > 0 && (
             <strong className="pending-count">{pendingCount}</strong>
@@ -417,9 +568,12 @@ function App() {
                 <span>TRIPULANTE</span>
                 <select
                   value={selectedAstronautId ?? ""}
-                  onChange={(event) =>
-                    setSelectedAstronautId(Number(event.target.value))
-                  }
+                  onChange={(event) => {
+                    setMeasurements([]);
+                    setEvaluations([]);
+                    setAlertBaselineId(0);
+                    setSelectedAstronautId(Number(event.target.value));
+                  }}
                 >
                   {astronauts.map((astronaut) => (
                     <option key={astronaut.id} value={astronaut.id}>
@@ -430,7 +584,7 @@ function App() {
               </label>
             )}
             <span
-              className={`connection-pill ${isOnline ? "is-online" : "is-offline"}`}
+              className={`connection-pill ${isApiAvailable ? "is-online" : "is-offline"}`}
             >
               <i />
               {connectionStatus}
@@ -498,6 +652,68 @@ function App() {
             </p>
           )}
 
+          {import.meta.env.DEV && (
+            <section className="simulator-panel" aria-label="Simulador local">
+              <div className="simulator-copy">
+                <p className="section-eyebrow">MODO DEMO LOCAL</p>
+                <strong>
+                  {isSimulatorRunning
+                    ? "Simulando telemetría"
+                    : "Simulador de sensores"}
+                </strong>
+                <small>
+                  Datos sintéticos; no son lecturas reales ni evaluación clínica.
+                </small>
+              </div>
+              <label className="simulator-profile">
+                <span>PERFIL</span>
+                <select
+                  value={simulatorProfile}
+                  disabled={isSimulatorRunning}
+                  onChange={(event) => {
+                    setAlertBaselineId(
+                      evaluations.reduce(
+                        (latestId, evaluation) =>
+                          Math.max(latestId, evaluation.id),
+                        0
+                      )
+                    );
+                    setSimulatorProfile(event.target.value as DemoProfile);
+                  }}
+                >
+                  <option value="normal">Normal</option>
+                  <option value="attention">Atención</option>
+                  <option value="critical">Crítico</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                className={`button ${isSimulatorRunning ? "button-secondary" : "button-primary"}`}
+                disabled={selectedAstronautId === null || loadingAstronauts}
+                onClick={() => {
+                  if (!isSimulatorRunning) {
+                    setAlertBaselineId(
+                      evaluations.reduce(
+                        (latestId, evaluation) =>
+                          Math.max(latestId, evaluation.id),
+                        0
+                      )
+                    );
+                  }
+                  setSimulatorError(null);
+                  setIsSimulatorRunning((running) => !running);
+                }}
+              >
+                {isSimulatorRunning ? "Pausar demo" : "Iniciar demo"}
+              </button>
+              {simulatorError && (
+                <p className="simulator-error" role="alert">
+                  {simulatorError}
+                </p>
+              )}
+            </section>
+          )}
+
           <section className={`diagnostic-banner status-${overallStatus}`}>
             <span className="diagnostic-symbol">✧</span>
             <div className="diagnostic-copy">
@@ -530,9 +746,9 @@ function App() {
               <div className="body-panel-heading">
                 <div>
                   <p className="section-eyebrow">MAPA CORPORAL DE SENSORES</p>
-                  <h2>Vista fisiológica</h2>
+                  <h2>Traje de astronauta</h2>
                   <p className="section-description">
-                    Distribución de las señales biométricas
+                    Resumen persistente de alertas biométricas
                   </p>
                 </div>
                 <span className="live-badge"><i /> LIVE</span>
@@ -562,8 +778,13 @@ function App() {
                   values={glucoseValues}
                 />
               </div>
-              <AlertsPanel alerts={alerts} />
             </div>
+            <AlertsPanel
+              alerts={alerts}
+              acknowledgingAlertId={acknowledgingAlertId}
+              actionError={alertActionError}
+              onAcknowledge={handleAcknowledgeAlert}
+            />
           </div>
         </main>
 

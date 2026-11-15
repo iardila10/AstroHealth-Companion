@@ -84,6 +84,37 @@ export interface MeasurementSubmission {
   evaluation?: EvaluationResult;
 }
 
+export type DemoProfile = "normal" | "attention" | "critical";
+
+export async function checkApiConnection(): Promise<boolean> {
+  try {
+    const health = await api.get<{ status: string }>("/health");
+    return health.status === "ok";
+  } catch {
+    return false;
+  }
+}
+
+export async function generateDemoTick(
+  astronautId: number,
+  environment: Environment,
+  profile: DemoProfile
+): Promise<EvaluationResult> {
+  return api.post<EvaluationResult>("/api/v1/demo/simulator/tick", {
+    astronaut_id: astronautId,
+    environment,
+    profile,
+  });
+}
+
+export async function acknowledgeEvaluation(
+  evaluationId: number
+): Promise<void> {
+  await api.patch<{ message: string; alert_id: number }>(
+    `/api/v1/evaluations/${evaluationId}/acknowledge`
+  );
+}
+
 export async function submitMeasurement(
   payload: MeasurementCreatePayload
 ): Promise<MeasurementSubmission> {
@@ -93,8 +124,6 @@ export async function submitMeasurement(
     recorded_at: new Date().toISOString(),
   };
   await saveQueuedMeasurement(queued);
-
-  if (!navigator.onLine) return { synced: false };
 
   try {
     const evaluation = await api.post<EvaluationResult>(

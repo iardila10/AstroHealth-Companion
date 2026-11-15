@@ -15,6 +15,7 @@ from app.models.base import Base
 from app.models.astronaut import Astronaut
 from app.models.measurement import Measurement
 from app.models.alert import Alert
+import app.api.routes.demo as demo_module
 
 
 @pytest.fixture
@@ -286,6 +287,83 @@ def test_measurement_with_nonexistent_astronaut(client):
     )
 
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("profile", "expected_status"),
+    [
+        ("normal", "green"),
+        ("attention", "yellow"),
+        ("critical", "red"),
+    ],
+)
+def test_local_demo_simulator_generates_and_saves_profile(
+    client, profile, expected_status
+):
+    astronaut = create_astronaut(client)
+
+    response = client.post(
+        "/api/v1/demo/simulator/tick",
+        json={
+            "astronaut_id": astronaut["id"],
+            "environment": "spacecraft",
+            "profile": profile,
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["overall_status"] == expected_status
+
+    measurements = client.get(
+        "/api/v1/measurements/",
+        params={"astronaut_id": astronaut["id"]},
+    ).json()
+    assert len(measurements) == 1
+    assert f"perfil {profile}" in measurements[0]["notes"]
+
+
+def test_local_demo_simulator_is_disabled_in_production(client, monkeypatch):
+    astronaut = create_astronaut(client)
+    monkeypatch.setattr(demo_module.settings, "ENVIRONMENT", "production")
+
+    response = client.post(
+        "/api/v1/demo/simulator/tick",
+        json={
+            "astronaut_id": astronaut["id"],
+            "environment": "spacecraft",
+            "profile": "normal",
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_local_demo_simulator_varies_alert_indicators(client):
+    astronaut = create_astronaut(client)
+    anomaly_indicators = []
+
+    for _ in range(2):
+        response = client.post(
+            "/api/v1/demo/simulator/tick",
+            json={
+                "astronaut_id": astronaut["id"],
+                "environment": "spacecraft",
+                "profile": "attention",
+            },
+        )
+        assert response.status_code == 201, response.text
+        statuses = response.json()["indicator_statuses"]
+        anomaly_indicators.append(
+            [
+                indicator
+                for indicator, result in statuses.items()
+                if result["status"] != "green"
+            ]
+        )
+
+    assert len(anomaly_indicators[0]) == 1
+    assert len(anomaly_indicators[1]) == 1
+    assert anomaly_indicators[0] != anomaly_indicators[1]
 
 
 def test_list_measurements_filtered_by_astronaut(client):

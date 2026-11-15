@@ -14,6 +14,7 @@ from app.api.routes import (
     measurements,
     evaluations,
     environments,
+    demo,
 )
 
 
@@ -136,4 +137,10 @@ app.include_router(
     environments.router,
     prefix="/api/v1/environments",
     tags=["Environments"],
+)
+
+app.include_router(
+    demo.router,
+    prefix="/api/v1/demo",
+    tags=["Local Demo"],
 )

@@ -25,7 +25,7 @@ def list_alerts(
     if status is not None:
         query = query.filter(Alert.overall_status == status)
 
-    alerts = query.order_by(Alert.created_at.desc()).limit(limit).all()
+    alerts = query.order_by(Alert.id.desc()).limit(limit).all()
 
     # Convertimos a dict para mayor flexibilidad en la respuesta
     return [
