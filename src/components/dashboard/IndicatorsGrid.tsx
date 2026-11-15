@@ -48,25 +48,25 @@ function IndicatorsGrid({ indicators }: IndicatorsGridProps) {
   };
 
   return (
-    <section className="w-full rounded-xl border border-slate-700 bg-slate-800 p-6">
+    <section className="indicator-panel">
 
       {/* Header */}
       <div>
-        <p className="text-xs font-semibold tracking-widest text-cyan-400">
-          BIOMETRIC MONITORING
+        <p className="section-eyebrow">
+          TELEMETRÍA BIOMÉTRICA
         </p>
 
-        <h2 className="mt-2 text-xl font-bold text-slate-100">
-          Health Indicators
+        <h2 className="section-title">
+          Indicadores fisiológicos
         </h2>
 
-        <p className="mt-1 text-sm text-slate-400">
-          Current astronaut health measurements
+        <p className="section-description">
+          Lecturas más recientes de la tripulación
         </p>
       </div>
 
       {/* Indicators Grid */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="indicator-grid">
 
         {indicators.map((indicator) => {
 
@@ -75,22 +75,22 @@ function IndicatorsGrid({ indicators }: IndicatorsGridProps) {
           return (
             <article
               key={indicator.id}
-              className="rounded-lg border border-slate-700 bg-slate-900/50 p-4"
+              className={`indicator-card status-${indicator.status}`}
             >
 
               {/* Indicator Name */}
-              <p className="text-sm font-medium text-slate-400">
+              <p className="indicator-label">
                 {indicator.label}
               </p>
 
               {/* Indicator Value */}
-              <div className="mt-3 flex items-baseline gap-2">
+              <div className="indicator-reading">
 
-                <span className="text-3xl font-bold tabular-nums text-slate-100">
+                <span className="indicator-value">
                   {indicator.value ?? "--"}
                 </span>
 
-                <span className="text-sm text-slate-500">
+                <span className="indicator-unit">
                   {indicator.unit}
                 </span>
 
@@ -100,7 +100,7 @@ function IndicatorsGrid({ indicators }: IndicatorsGridProps) {
               <div className="mt-4">
 
                 <span
-                  className={`inline-flex rounded-md border px-2 py-1 text-xs font-bold tracking-wide ${config.color} ${config.background} ${config.border}`}
+                  className={`indicator-status ${config.color} ${config.background} ${config.border}`}
                 >
                   {config.label}
                 </span>

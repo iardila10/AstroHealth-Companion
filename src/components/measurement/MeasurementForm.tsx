@@ -137,9 +137,9 @@ export const MeasurementForm = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-xl border border-[#334155] bg-[#1E293B] shadow-2xl">
-        <div className="flex items-center justify-between border-b border-[#334155] px-6 py-4">
+    <div className="measurement-overlay">
+      <div className="measurement-dialog">
+        <div className="measurement-dialog-header">
           <h2 className="text-lg font-semibold text-[#F8FAFC]">
             Nueva medición
           </h2>
@@ -153,8 +153,8 @@ export const MeasurementForm = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 p-6">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="measurement-form">
+          <div className="measurement-fields">
             {numberInput("heart_rate", "Frecuencia cardíaca (bpm)", 31, 219)}
             {numberInput("temperature", "Temperatura (°C)", 34.1, 41.9, "0.1")}
             {numberInput("blood_pressure_sys", "Presión sistólica (mmHg)", 71, 219)}
@@ -238,7 +238,7 @@ export const MeasurementForm = ({
             </p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="measurement-actions">
             <button
               type="button"
               onClick={onClose}

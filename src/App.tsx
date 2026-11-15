@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import AlertsPanel from "./components/dashboard/AlertsPanel";
-import HealthOverview from "./components/dashboard/HealthOverview";
 import IndicatorsGrid from "./components/dashboard/IndicatorsGrid";
-import TrendsChart from "./components/dashboard/TrendsChart";
+import SensorBodyMap from "./components/dashboard/SensorBodyMap";
+import TrendCard from "./components/dashboard/TrendCard";
 import { MeasurementForm } from "./components/measurement/MeasurementForm";
 import {
   createAstronaut,
@@ -15,10 +15,27 @@ import {
   type EvaluationRecord,
   type MeasurementRecord,
 } from "./services/healthService";
-import {
-  listQueuedMeasurements,
-} from "./services/offlineStorage";
-import type { Environment, HealthStatus } from "./types/health";
+import { listQueuedMeasurements } from "./services/offlineStorage";
+import type { Environment, HealthStatus, IndicatorKey } from "./types/health";
+
+const sensorCategories = [
+  { name: "Fisiológicos", detail: "Señales vitales", count: "5/5", icon: "♥", active: true },
+  { name: "Bioquímicos", detail: "Glucosa", count: "1/1", icon: "◉", active: false },
+  { name: "Moleculares", detail: "Próximamente", count: "", icon: "✣", active: false },
+  { name: "Celulares", detail: "Próximamente", count: "", icon: "▦", active: false },
+  { name: "Neurológicos", detail: "Próximamente", count: "", icon: "⌁", active: false },
+  { name: "Imágenes", detail: "Próximamente", count: "", icon: "▧", active: false },
+  { name: "Wearables", detail: "Próximamente", count: "", icon: "⌚", active: false },
+  { name: "Ambientales", detail: "Entorno de misión", count: "1/1", icon: "◌", active: false },
+  { name: "Órganos", detail: "Próximamente", count: "", icon: "✦", active: false },
+];
+
+const statusLabels: Record<HealthStatus, string> = {
+  normal: "ESTADO NORMAL",
+  attention: "REQUIERE ATENCIÓN",
+  critical: "ESTADO CRÍTICO",
+  no_data: "ESPERANDO DATOS",
+};
 
 function formatDate(value?: string | null): string {
   if (!value) return "Sin datos";
@@ -58,7 +75,9 @@ function App() {
 
     const handleOffline = () => {
       setIsOnline(false);
-      setSyncMessage("Sin conexión: las nuevas mediciones se guardarán en este dispositivo.");
+      setSyncMessage(
+        "Sin conexión: las nuevas mediciones se guardarán en este dispositivo."
+      );
     };
 
     const handleOnline = async () => {
@@ -113,7 +132,11 @@ function App() {
       })
       .catch((cause: unknown) => {
         if (active) {
-          setError(cause instanceof Error ? cause.message : "No se pudo cargar la tripulación.");
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "No se pudo cargar la tripulación."
+          );
         }
       })
       .finally(() => {
@@ -150,7 +173,11 @@ function App() {
       })
       .catch((cause: unknown) => {
         if (active) {
-          setError(cause instanceof Error ? cause.message : "No se pudieron cargar los datos de salud.");
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "No se pudieron cargar los datos de salud."
+          );
         }
       })
       .finally(() => {
@@ -173,6 +200,7 @@ function App() {
   const selectedAstronaut = astronauts.find(
     (astronaut) => astronaut.id === selectedAstronautId
   );
+  const overallStatus = mapStatus(latestEvaluation?.overall_status);
 
   const indicators = useMemo(() => {
     const values = latestMeasurement;
@@ -258,7 +286,10 @@ function App() {
       id: String(evaluation.id),
       title: recommendation?.title ?? "Alerta de salud",
       message: evaluation.summary || "Un indicador de salud requiere atención.",
-      severity: evaluation.overall_status === "red" ? "critical" as const : "attention" as const,
+      severity:
+        evaluation.overall_status === "red"
+          ? ("critical" as const)
+          : ("attention" as const),
       createdAt: formatDate(evaluation.created_at),
       recommendation:
         recommendation?.message ??
@@ -268,7 +299,9 @@ function App() {
     };
   });
 
-  const handleCreateAstronaut = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateAstronaut = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
     setError(null);
     setIsCreatingAstronaut(true);
@@ -285,7 +318,11 @@ function App() {
       setAstronautRole("");
       setShowCreateAstronaut(false);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo registrar al tripulante.");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "No se pudo registrar al tripulante."
+      );
     } finally {
       setIsCreatingAstronaut(false);
     }
@@ -294,143 +331,260 @@ function App() {
   const connectionStatus = !isOnline
     ? "Sin conexión"
     : loadingAstronauts
-    ? "Conectando con el backend..."
-    : error
-      ? "Error de sincronización"
-      : "Backend conectado";
-
+      ? "Conectando..."
+      : error
+        ? "Error de sincronización"
+        : "En línea";
   const environment: Environment =
     latestMeasurement?.environment ??
     selectedAstronaut?.current_environment ??
     "spacecraft";
+  const sensorStatuses: Partial<Record<IndicatorKey, HealthStatus>> = {
+    heart_rate: mapStatus(latestEvaluation?.indicator_statuses.heart_rate?.status),
+    blood_pressure:
+      indicators.find((indicator) => indicator.id === "blood-pressure")?.status ??
+      "no_data",
+    temperature: mapStatus(latestEvaluation?.indicator_statuses.temperature?.status),
+    sleep_hours: mapStatus(latestEvaluation?.indicator_statuses.sleep_hours?.status),
+    glucose: mapStatus(latestEvaluation?.indicator_statuses.glucose?.status),
+    fatigue_level: mapStatus(latestEvaluation?.indicator_statuses.fatigue_level?.status),
+  };
+  const heartRateValues = history.map((point) => point.heart_rate);
+  const glucoseValues = history.map((point) => point.glucose);
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div>
-          <p className="app-eyebrow">ASTROHEALTH COMPANION</p>
-          <h1>Mission Control</h1>
-          <p className="app-subtitle">
-            Monitoreo de salud de la tripulación durante la misión.
-          </p>
-          {astronauts.length > 0 && (
-            <label className="crew-selector">
-              Tripulante
-              <select
-                value={selectedAstronautId ?? ""}
-                onChange={(event) =>
-                  setSelectedAstronautId(Number(event.target.value))
-                }
-              >
-                {astronauts.map((astronaut) => (
-                  <option key={astronaut.id} value={astronaut.id}>
-                    {astronaut.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+      <aside className="sensor-sidebar">
+        <div className="brand-lockup">
+          <span className="brand-symbol">✦</span>
+          <span className="brand-copy">
+            <strong>ASTROHEALTH</strong>
+            <small>COMPANION / MISSION 04</small>
+          </span>
+        </div>
+
+        <div className="sidebar-monitor">
+          <span className="live-dot" />
+          <span>MONITOREO DE MISIÓN</span>
+        </div>
+
+        <div className="sensor-sidebar-title">CATEGORÍAS DE SENSORES</div>
+        <nav className="sensor-category-list" aria-label="Categorías de sensores">
+          {sensorCategories.map((category) => (
+            <div
+              key={category.name}
+              className={`sensor-category ${category.active ? "is-active" : ""}`}
+              aria-current={category.active ? "page" : undefined}
+            >
+              <span className="category-icon">{category.icon}</span>
+              <span className="category-copy">
+                <strong>{category.name}</strong>
+                <small>{category.detail}</small>
+                {category.active && (
+                  <span className="category-progress">
+                    <i />
+                  </span>
+                )}
+              </span>
+              {category.count && (
+                <span className="category-count">{category.count}</span>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <span className={`connection-light ${isOnline ? "is-online" : ""}`} />
+          <span>{connectionStatus}</span>
+          {pendingCount > 0 && (
+            <strong className="pending-count">{pendingCount}</strong>
           )}
         </div>
-        <div className="flex flex-col items-start gap-3">
-          <span className="connection-status">{connectionStatus}</span>
-          {selectedAstronautId !== null && (
+      </aside>
+
+      <div className="main-screen">
+        <header className="app-header">
+          <div className="header-title">
+            <p className="app-eyebrow">TELEMETRÍA BIOMÉDICA · EN VIVO</p>
+            <h1>Centro de salud</h1>
+            <p className="app-subtitle">
+              Monitoreo fisiológico de la tripulación
+            </p>
+          </div>
+          <div className="header-actions">
+            {astronauts.length > 0 && (
+              <label className="crew-picker">
+                <span>TRIPULANTE</span>
+                <select
+                  value={selectedAstronautId ?? ""}
+                  onChange={(event) =>
+                    setSelectedAstronautId(Number(event.target.value))
+                  }
+                >
+                  {astronauts.map((astronaut) => (
+                    <option key={astronaut.id} value={astronaut.id}>
+                      {astronaut.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <span
+              className={`connection-pill ${isOnline ? "is-online" : "is-offline"}`}
+            >
+              <i />
+              {connectionStatus}
+            </span>
             <button
               type="button"
-              onClick={() => setIsMeasurementFormOpen(true)}
-              className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-300"
+              onClick={() => setShowCreateAstronaut((show) => !show)}
+              className="button button-secondary"
             >
-              Registrar medición
+              {showCreateAstronaut ? "Cancelar" : "＋ Tripulante"}
             </button>
+            {selectedAstronautId !== null && (
+              <button
+                type="button"
+                onClick={() => setIsMeasurementFormOpen(true)}
+                className="button button-primary"
+              >
+                ＋ Medición
+              </button>
+            )}
+          </div>
+        </header>
+
+        {showCreateAstronaut && (
+          <form onSubmit={handleCreateAstronaut} className="new-astronaut-form">
+            <label className="form-field">
+              Nombre
+              <input
+                required
+                value={astronautName}
+                onChange={(event) => setAstronautName(event.target.value)}
+              />
+            </label>
+            <label className="form-field">
+              Rol
+              <input
+                required
+                value={astronautRole}
+                onChange={(event) => setAstronautRole(event.target.value)}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={isCreatingAstronaut}
+              className="button button-primary"
+            >
+              {isCreatingAstronaut ? "Guardando..." : "Registrar"}
+            </button>
+          </form>
+        )}
+
+        <main className="dashboard">
+          {error && <p role="alert" className="data-error">{error}</p>}
+          {syncMessage && (
+            <p role="status" className="sync-message">{syncMessage}</p>
           )}
-          <button
-            type="button"
-            onClick={() => setShowCreateAstronaut((show) => !show)}
-            className="text-sm text-cyan-300 underline"
-          >
-            {showCreateAstronaut ? "Cancelar registro" : "Agregar tripulante"}
-          </button>
-        </div>
-      </header>
+          {pendingCount > 0 && (
+            <p role="status" className="sync-message is-pending">
+              {pendingCount} medición(es) pendiente(s) de enviar al servidor central.
+            </p>
+          )}
+          {!loadingAstronauts && astronauts.length === 0 && !error && (
+            <p className="data-empty">
+              No hay tripulantes registrados. Usa “＋ Tripulante” para comenzar.
+            </p>
+          )}
 
-      {showCreateAstronaut && (
-        <form
-          onSubmit={handleCreateAstronaut}
-          className="mx-auto mt-6 flex max-w-5xl flex-wrap items-end gap-3 rounded-xl border border-slate-700 bg-slate-800 p-4"
-        >
-          <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm text-slate-300">
-            Nombre
-            <input
-              required
-              value={astronautName}
-              onChange={(event) => setAstronautName(event.target.value)}
-              className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100"
-            />
-          </label>
-          <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm text-slate-300">
-            Rol
-            <input
-              required
-              value={astronautRole}
-              onChange={(event) => setAstronautRole(event.target.value)}
-              className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={isCreatingAstronaut}
-            className="rounded-lg bg-cyan-400 px-4 py-2 font-semibold text-slate-950 disabled:opacity-60"
-          >
-            {isCreatingAstronaut ? "Guardando..." : "Registrar"}
-          </button>
-        </form>
-      )}
+          <section className={`diagnostic-banner status-${overallStatus}`}>
+            <span className="diagnostic-symbol">✧</span>
+            <div className="diagnostic-copy">
+              <p className="section-eyebrow">ANÁLISIS AUTOMÁTICO</p>
+              <h2>{statusLabels[overallStatus]}</h2>
+              <p>
+                {latestEvaluation?.summary ??
+                  "Registra una medición para generar el análisis de salud."}
+              </p>
+            </div>
+            <div className="diagnostic-meta">
+              <span>{environment === "spacecraft" ? "NAVE ESPACIAL" : "BASE LUNAR"}</span>
+              <small>Actualizado: {formatDate(latestMeasurement?.recorded_at)}</small>
+            </div>
+            <button
+              type="button"
+              className="refresh-button"
+              onClick={() => setRefreshToken((token) => token + 1)}
+              aria-label="Actualizar análisis de salud"
+              title="Actualizar datos"
+            >
+              ↻
+            </button>
+          </section>
 
-      <main className="dashboard">
-        {error && <p role="alert" className="data-error">{error}</p>}
-        {syncMessage && (
-          <p role="status" className="data-loading">{syncMessage}</p>
-        )}
-        {pendingCount > 0 && (
-          <p role="status" className="data-loading">
-            {pendingCount} medición(es) pendiente(s) de enviar al servidor central.
-          </p>
-        )}
-        {!loadingAstronauts && astronauts.length === 0 && !error && (
-          <p className="data-empty">
-            No hay tripulantes registrados. Usa “Agregar tripulante” para comenzar.
-          </p>
-        )}
-        {loadingData && <p className="data-loading">Cargando datos de salud...</p>}
-        <HealthOverview
-          status={mapStatus(latestEvaluation?.overall_status)}
-          environment={environment}
-          updatedAt={formatDate(latestMeasurement?.recorded_at)}
-          alertCount={activeAlerts.length}
-        />
-        <IndicatorsGrid indicators={indicators} />
-        <div className="dashboard-columns">
-          <TrendsChart history={history} />
-          <AlertsPanel alerts={alerts} />
-        </div>
-      </main>
+          {loadingData && <p className="data-loading">Cargando datos de salud...</p>}
 
-      {selectedAstronautId !== null && (
-        <MeasurementForm
-          astronautId={selectedAstronautId}
-          environment={environment}
-          isOpen={isMeasurementFormOpen}
-          onClose={() => setIsMeasurementFormOpen(false)}
-          onSubmitted={(synced) => {
-            setSyncMessage(
-              synced
-                ? "Medición guardada y sincronizada."
-                : "Medición guardada en este dispositivo; se enviará al recuperar la conexión."
-            );
-            setPendingCount((count) => count + (synced ? 0 : 1));
-            setRefreshToken((token) => token + 1);
-          }}
-        />
-      )}
+          <div className="dashboard-layout">
+            <section className="body-panel">
+              <div className="body-panel-heading">
+                <div>
+                  <p className="section-eyebrow">MAPA CORPORAL DE SENSORES</p>
+                  <h2>Vista fisiológica</h2>
+                  <p className="section-description">
+                    Distribución de las señales biométricas
+                  </p>
+                </div>
+                <span className="live-badge"><i /> LIVE</span>
+              </div>
+              <SensorBodyMap statuses={sensorStatuses} />
+              <div className="body-legend">
+                <span><i className="legend-normal" /> Normal</span>
+                <span><i className="legend-attention" /> Atención</span>
+                <span><i className="legend-critical" /> Crítico</span>
+                <span><i className="legend-no-data" /> Sin datos</span>
+              </div>
+            </section>
+
+            <div className="health-workspace">
+              <IndicatorsGrid indicators={indicators} />
+              <div className="trend-grid">
+                <TrendCard
+                  title="Frecuencia cardíaca"
+                  unit="bpm"
+                  color="#ff5470"
+                  values={heartRateValues}
+                />
+                <TrendCard
+                  title="Glucosa"
+                  unit="mg/dL"
+                  color="#22d3ee"
+                  values={glucoseValues}
+                />
+              </div>
+              <AlertsPanel alerts={alerts} />
+            </div>
+          </div>
+        </main>
+
+        {selectedAstronautId !== null && (
+          <MeasurementForm
+            astronautId={selectedAstronautId}
+            environment={environment}
+            isOpen={isMeasurementFormOpen}
+            onClose={() => setIsMeasurementFormOpen(false)}
+            onSubmitted={(synced) => {
+              setSyncMessage(
+                synced
+                  ? "Medición guardada y sincronizada."
+                  : "Medición guardada en este dispositivo; se enviará al recuperar la conexión."
+              );
+              setPendingCount((count) => count + (synced ? 0 : 1));
+              setRefreshToken((token) => token + 1);
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
