@@ -1,30 +1,57 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+
 from typing import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 from app.models.base import Base
 
-# Engine
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False},  # Necesario solo para SQLite
-    echo=settings.DEBUG,  # Muestra las queries en consola cuando DEBUG=True
+
+database_url = make_url(settings.DATABASE_URL)
+
+is_sqlite = database_url.get_backend_name() == "sqlite"
+
+connect_args = (
+    {"check_same_thread": False}
+    if is_sqlite
+    else {}
 )
 
-# Session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+engine = create_engine(
+    settings.DATABASE_URL,
+    connect_args=connect_args,
+    pool_pre_ping=True,
+    echo=settings.DEBUG,
+)
+
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autocommit=False,
+    autoflush=False,
+)
 
 
 def create_tables() -> None:
-    """Crea todas las tablas en la base de datos."""
+    """Crea las tablas registradas en SQLAlchemy."""
+
     Base.metadata.create_all(bind=engine)
 
 
 def get_db() -> Generator[Session, None, None]:
-    """Dependency de FastAPI para obtener una sesión de base de datos."""
+    """Proporciona una sesión de base de datos."""
+
     db = SessionLocal()
+
     try:
         yield db
+
+    except Exception:
+        db.rollback()
+        raise
+
     finally:
         db.close()

@@ -410,3 +410,27 @@ def test_get_invalid_environment_thresholds(client):
     )
 
     assert response.status_code == 404
+
+
+def test_list_alerts_filtered_by_astronaut(client):
+    first = create_astronaut(
+        client,
+        name="First Astronaut"
+    )
+
+    second = create_astronaut(
+        client,
+        name="Second Astronaut"
+    )
+
+    create_measurement(client, first["id"])
+    create_measurement(client, second["id"])
+
+    response = client.get(
+        "/api/v1/evaluations/",
+        params={"astronaut_id": first["id"]}
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["astronaut_id"] == first["id"]
