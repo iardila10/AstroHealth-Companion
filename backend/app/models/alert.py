@@ -1,11 +1,15 @@
 from datetime import datetime
-from typing import Optional, Any
+from typing import TYPE_CHECKING, Optional, Any
 
 from sqlalchemy import String, Boolean, DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.astronaut import Astronaut
+    from app.models.measurement import Measurement
 
 
 class Alert(Base):
