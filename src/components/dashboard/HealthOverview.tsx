@@ -28,19 +28,19 @@ function HealthOverview({
       border: "border-emerald-500/30",
     },
     attention: {
-      label: "ATENCIÓN",
+      label: "ATTENTION",
       color: "text-amber-400",
       background: "bg-amber-500/10",
       border: "border-amber-500/30",
     },
     critical: {
-      label: "CRÍTICO",
+      label: "CRITICAL",
       color: "text-rose-400",
       background: "bg-rose-500/10",
       border: "border-rose-500/30",
     },
     no_data: {
-      label: "SIN DATOS",
+      label: "NO DATA",
       color: "text-slate-400",
       background: "bg-slate-500/10",
       border: "border-slate-500/30",

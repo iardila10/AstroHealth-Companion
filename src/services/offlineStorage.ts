@@ -19,7 +19,7 @@ let databasePromise: Promise<IDBDatabase> | undefined;
 
 function openDatabase(): Promise<IDBDatabase> {
   if (!("indexedDB" in window)) {
-    return Promise.reject(new Error("Este navegador no permite guardar datos sin conexión."));
+    return Promise.reject(new Error("This browser does not allow storing data offline."));
   }
 
   if (!databasePromise) {

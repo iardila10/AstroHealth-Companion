@@ -8,19 +8,19 @@ interface SensorBodyMapProps {
 }
 
 const sensors: Array<{ key: IndicatorKey; label: string }> = [
-  { key: "sleep_hours", label: "Sueño · cabeza" },
-  { key: "heart_rate", label: "Pulso · pecho" },
-  { key: "blood_pressure", label: "Presión · brazos" },
-  { key: "temperature", label: "Temperatura · torso" },
-  { key: "glucose", label: "Glucosa · abdomen" },
-  { key: "fatigue_level", label: "Fatiga · piernas" },
+  { key: "sleep_hours", label: "Sleep · head" },
+  { key: "heart_rate", label: "Pulse · chest" },
+  { key: "blood_pressure", label: "Pressure · arms" },
+  { key: "temperature", label: "Temperature · torso" },
+  { key: "glucose", label: "Glucose · abdomen" },
+  { key: "fatigue_level", label: "Fatigue · legs" },
 ];
 
 const statusNames: Record<HealthStatus, string> = {
   normal: "normal",
-  attention: "en atención",
-  critical: "crítico",
-  no_data: "sin datos",
+  attention: "needs attention",
+  critical: "critical",
+  no_data: "no data",
 };
 
 function SensorBodyMap({ statuses }: SensorBodyMapProps) {
@@ -31,7 +31,7 @@ function SensorBodyMap({ statuses }: SensorBodyMapProps) {
       >
         <AstronautModel3D statuses={statuses} />
       </Suspense>
-      <ul className="body-map-accessible" aria-label="Estados de los sensores">
+      <ul className="body-map-accessible" aria-label="Sensor states">
         {sensors.map((sensor) => {
           const status = statuses[sensor.key] ?? "no_data";
           return (
@@ -43,7 +43,7 @@ function SensorBodyMap({ statuses }: SensorBodyMapProps) {
       </ul>
       <div className="body-map-caption">
         <span className="live-dot" />
-        <span>Sensores del traje espacial</span>
+        <span>Space suit sensors</span>
       </div>
     </div>
   );

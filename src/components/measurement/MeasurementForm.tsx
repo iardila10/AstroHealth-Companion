@@ -66,7 +66,7 @@ export const MeasurementForm = ({
         (value) => typeof value !== "number" || !Number.isFinite(value)
       )
     ) {
-      setError("Completa todos los valores de la medición.");
+      setError("Please complete all measurement values.");
       return;
     }
 
@@ -74,7 +74,7 @@ export const MeasurementForm = ({
       (formData.blood_pressure_sys ?? 0) <=
       (formData.blood_pressure_dia ?? 0)
     ) {
-      setError("La presión sistólica debe ser mayor que la diastólica.");
+      setError("Systolic pressure must be greater than diastolic pressure.");
       return;
     }
 
@@ -99,9 +99,7 @@ export const MeasurementForm = ({
       setFormData({ environment, fatigue_level: 5 });
     } catch (cause) {
       setError(
-        cause instanceof Error
-          ? cause.message
-          : "No se pudo guardar la medición."
+        cause instanceof Error ? cause.message : "Could not save the measurement."
       );
     } finally {
       setIsSubmitting(false);
@@ -141,12 +139,12 @@ export const MeasurementForm = ({
       <div className="measurement-dialog">
         <div className="measurement-dialog-header">
           <h2 className="text-lg font-semibold text-[#F8FAFC]">
-            Nueva medición
+            New measurement
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar formulario"
+            aria-label="Close form"
             className="rounded-md p-1.5 text-[#94A3B8] hover:bg-[#334155] hover:text-[#F8FAFC]"
           >
             <X size={18} />
@@ -155,12 +153,12 @@ export const MeasurementForm = ({
 
         <form onSubmit={handleSubmit} className="measurement-form">
           <div className="measurement-fields">
-            {numberInput("heart_rate", "Frecuencia cardíaca (bpm)", 31, 219)}
-            {numberInput("temperature", "Temperatura (°C)", 34.1, 41.9, "0.1")}
-            {numberInput("blood_pressure_sys", "Presión sistólica (mmHg)", 71, 219)}
-            {numberInput("blood_pressure_dia", "Presión diastólica (mmHg)", 41, 139)}
-            {numberInput("glucose", "Glucosa (mg/dL)", 41, 399)}
-            {numberInput("sleep_hours", "Horas de sueño", 0, 16, "0.5")}
+            {numberInput("heart_rate", "Heart rate (bpm)", 31, 219)}
+            {numberInput("temperature", "Temperature (°C)", 34.1, 41.9, "0.1")}
+            {numberInput("blood_pressure_sys", "Systolic pressure (mmHg)", 71, 219)}
+            {numberInput("blood_pressure_dia", "Diastolic pressure (mmHg)", 41, 139)}
+            {numberInput("glucose", "Glucose (mg/dL)", 41, 399)}
+            {numberInput("sleep_hours", "Sleep hours", 0, 16, "0.5")}
           </div>
 
           <div>
@@ -168,7 +166,7 @@ export const MeasurementForm = ({
               htmlFor="fatigue_level"
               className="mb-1.5 block text-xs font-medium text-[#94A3B8]"
             >
-              Nivel de fatiga (1-10)
+              Fatigue level (1-10)
             </label>
             <input
               id="fatigue_level"
@@ -180,11 +178,11 @@ export const MeasurementForm = ({
               className="w-full accent-[#22D3EE]"
             />
             <div className="flex justify-between text-xs text-[#64748B]">
-              <span>1 - Baja</span>
+              <span>1 - Low</span>
               <span className="font-medium text-[#F8FAFC]">
                 {formData.fatigue_level ?? 5}
               </span>
-              <span>10 - Alta</span>
+              <span>10 - High</span>
             </div>
           </div>
 
@@ -193,7 +191,7 @@ export const MeasurementForm = ({
               htmlFor="environment"
               className="mb-1.5 block text-xs font-medium text-[#94A3B8]"
             >
-              Entorno
+              Environment
             </label>
             <select
               id="environment"
@@ -206,8 +204,8 @@ export const MeasurementForm = ({
               }
               className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-3 py-2 text-sm text-[#F8FAFC] focus:border-[#22D3EE] focus:outline-none"
             >
-              <option value="spacecraft">Nave espacial</option>
-              <option value="lunar_base">Base lunar</option>
+              <option value="spacecraft">Spacecraft</option>
+              <option value="lunar_base">Lunar base</option>
             </select>
           </div>
 
@@ -216,7 +214,7 @@ export const MeasurementForm = ({
               htmlFor="notes"
               className="mb-1.5 block text-xs font-medium text-[#94A3B8]"
             >
-              Notas (opcional)
+              Notes (optional)
             </label>
             <textarea
               id="notes"
@@ -244,14 +242,14 @@ export const MeasurementForm = ({
               onClick={onClose}
               className="flex-1 rounded-lg border border-[#334155] px-4 py-2.5 text-sm font-medium text-[#94A3B8] hover:bg-[#334155]"
             >
-              Cancelar
+              Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="flex-1 rounded-lg bg-[#22D3EE] px-4 py-2.5 text-sm font-semibold text-[#0F172A] hover:bg-[#38BDF8] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Guardando..." : "Guardar medición"}
+              {isSubmitting ? "Saving..." : "Save measurement"}
             </button>
           </div>
         </form>

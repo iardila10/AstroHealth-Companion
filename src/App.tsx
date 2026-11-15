@@ -22,23 +22,198 @@ import {
 import { listQueuedMeasurements } from "./services/offlineStorage";
 import type { Environment, HealthStatus, IndicatorKey } from "./types/health";
 
+type Language = "en" | "es";
+
+const translations = {
+  en: {
+    noData: "No data",
+    connectionMonitoring: "MISSION MONITORING",
+    sensorCategories: "SENSOR CATEGORIES",
+    apiOnline: "Local API active",
+    apiOffline: "Local API disconnected",
+    noMeasurements: "No measurements",
+    offlineMessage:
+      "No internet: the local API will be used; if it does not respond, the data remains pending on this device.",
+    onlineMessage: "Connection available. Synchronizing measurements...",
+    syncSuccess: (count: number) => `${count} measurement(s) synchronized.`,
+    syncFailure: "Could not synchronize pending measurements.",
+    loadCrewFailure: "Could not load the crew.",
+    loadHealthFailure: "Could not load health data.",
+    telemetryLive: "BIOMEDICAL TELEMETRY · LIVE",
+    healthCenter: "Health center",
+    crewMonitoring: "Crew physiological monitoring",
+    crewMember: "CREW MEMBER",
+    addCrew: "Add crew member",
+    addMeasurement: "Add measurement",
+    cancel: "Cancel",
+    name: "Name",
+    role: "Role",
+    saving: "Saving...",
+    register: "Register",
+    pendingSyncSummary: (count: number) =>
+      `${count} measurement(s) pending to send to the central server.`,
+    emptyCrew: "No crew members registered. Use “＋ Add crew member” to begin.",
+    localDemoMode: "LOCAL DEMO MODE",
+    simulatingTelemetry: "Simulating telemetry",
+    sensorSimulator: "Sensor simulator",
+    syntheticDataWarning:
+      "Synthetic data; not real clinical readings or evaluations.",
+    profile: "PROFILE",
+    normal: "Normal",
+    attention: "Attention",
+    critical: "Critical",
+    pauseDemo: "Pause demo",
+    startDemo: "Start demo",
+    automaticAnalysis: "AUTOMATIC ANALYSIS",
+    waitingForMeasurement:
+      "Record a measurement to generate the health analysis.",
+    environmentSpacecraft: "SPACECRAFT",
+    environmentLunarBase: "LUNAR BASE",
+    updated: "Updated:",
+    loadingHealthData: "Loading health data...",
+    bodyMapTitle: "Astronaut suit",
+    bodyMapSummary: "Persistent summary of biometric alerts",
+    legendNormal: "Normal",
+    legendAttention: "Attention",
+    legendCritical: "Critical",
+    legendNoData: "No data",
+    heartRate: "Heart rate",
+    bloodPressure: "Blood pressure",
+    temperature: "Temperature",
+    sleepHours: "Sleep hours",
+    glucose: "Glucose",
+    fatigueLevel: "Fatigue level",
+    alertHealth: "Health alert",
+    genericAlertMessage: "A health indicator requires attention.",
+    alertRecommendation:
+      "Review the recent health measurements and recommended actions.",
+    failedAckAlert: "Could not mark the alert as handled.",
+    createAstronautFailure: "Could not register the crew member.",
+    apiCheckNoConnection: "Local API disconnected",
+    demoProgressStatus: "Demo in progress",
+    noDataMessage: "No data available",
+    sensorCategoriesData: [
+      { name: "Physiological", detail: "Vital signs", count: "5/5", icon: "♥", active: true },
+      { name: "Biochemical", detail: "Glucose", count: "1/1", icon: "◉", active: false },
+      { name: "Molecular", detail: "Coming soon", count: "", icon: "✣", active: false },
+      { name: "Cellular", detail: "Coming soon", count: "", icon: "▦", active: false },
+      { name: "Neurological", detail: "Coming soon", count: "", icon: "⌁", active: false },
+      { name: "Imaging", detail: "Coming soon", count: "", icon: "▧", active: false },
+      { name: "Wearables", detail: "Coming soon", count: "", icon: "⌚", active: false },
+      { name: "Environmental", detail: "Mission environment", count: "1/1", icon: "◌", active: false },
+      { name: "Organs", detail: "Coming soon", count: "", icon: "✦", active: false },
+    ],
+    statusLabels: {
+      normal: "NORMAL STATUS",
+      attention: "REQUIRES ATTENTION",
+      critical: "CRITICAL STATUS",
+      no_data: "WAITING FOR DATA",
+    } as Record<HealthStatus, string>,
+  },
+  es: {
+    noData: "No data",
+    connectionMonitoring: "MISSION MONITORING",
+    sensorCategories: "SENSOR CATEGORIES",
+    apiOnline: "Local API active",
+    apiOffline: "Local API disconnected",
+    noMeasurements: "No measurements",
+    offlineMessage:
+      "No internet: the local API will be used; if it does not respond, the data remains pending on this device.",
+    onlineMessage: "Connection available. Synchronizing measurements...",
+    syncSuccess: (count: number) => `${count} measurement(s) synchronized.`,
+    syncFailure: "Could not synchronize pending measurements.",
+    loadCrewFailure: "Could not load the crew.",
+    loadHealthFailure: "Could not load health data.",
+    telemetryLive: "BIOMEDICAL TELEMETRY · LIVE",
+    healthCenter: "Health center",
+    crewMonitoring: "Crew physiological monitoring",
+    crewMember: "CREW MEMBER",
+    addCrew: "Add crew member",
+    addMeasurement: "Add measurement",
+    cancel: "Cancel",
+    name: "Name",
+    role: "Role",
+    saving: "Saving...",
+    register: "Register",
+    pendingSyncSummary: (count: number) =>
+      `${count} measurement(s) pending to send to the central server.`,
+    emptyCrew: "No crew members registered. Use “＋ Add crew member” to begin.",
+    localDemoMode: "LOCAL DEMO MODE",
+    simulatingTelemetry: "Simulating telemetry",
+    sensorSimulator: "Sensor simulator",
+    syntheticDataWarning:
+      "Synthetic data; not real clinical readings or evaluations.",
+    profile: "PROFILE",
+    normal: "Normal",
+    attention: "Attention",
+    critical: "Critical",
+    pauseDemo: "Pause demo",
+    startDemo: "Start demo",
+    automaticAnalysis: "AUTOMATIC ANALYSIS",
+    waitingForMeasurement:
+      "Record a measurement to generate the health analysis.",
+    environmentSpacecraft: "SPACECRAFT",
+    environmentLunarBase: "LUNAR BASE",
+    updated: "Updated:",
+    loadingHealthData: "Loading health data...",
+    bodyMapTitle: "Astronaut suit",
+    bodyMapSummary: "Persistent summary of biometric alerts",
+    legendNormal: "Normal",
+    legendAttention: "Attention",
+    legendCritical: "Critical",
+    legendNoData: "No data",
+    heartRate: "Heart rate",
+    bloodPressure: "Blood pressure",
+    temperature: "Temperature",
+    sleepHours: "Sleep hours",
+    glucose: "Glucose",
+    fatigueLevel: "Fatigue level",
+    alertHealth: "Health alert",
+    genericAlertMessage: "A health indicator requires attention.",
+    alertRecommendation:
+      "Review the recent health measurements and recommended actions.",
+    failedAckAlert: "Could not mark the alert as handled.",
+    createAstronautFailure: "Could not register the crew member.",
+    apiCheckNoConnection: "Local API disconnected",
+    demoProgressStatus: "Demo in progress",
+    noDataMessage: "No data available",
+    sensorCategoriesData: [
+      { name: "Physiological", detail: "Vital signs", count: "5/5", icon: "♥", active: true },
+      { name: "Biochemical", detail: "Glucose", count: "1/1", icon: "◉", active: false },
+      { name: "Molecular", detail: "Coming soon", count: "", icon: "✣", active: false },
+      { name: "Cellular", detail: "Coming soon", count: "", icon: "▦", active: false },
+      { name: "Neurological", detail: "Coming soon", count: "", icon: "⌁", active: false },
+      { name: "Imaging", detail: "Coming soon", count: "", icon: "▧", active: false },
+      { name: "Wearables", detail: "Coming soon", count: "", icon: "⌚", active: false },
+      { name: "Environmental", detail: "Mission environment", count: "1/1", icon: "◌", active: false },
+      { name: "Organs", detail: "Coming soon", count: "", icon: "✦", active: false },
+    ],
+    statusLabels: {
+      normal: "NORMAL STATUS",
+      attention: "REQUIRES ATTENTION",
+      critical: "CRITICAL STATUS",
+      no_data: "WAITING FOR DATA",
+    } as Record<HealthStatus, string>,
+  },
+} as const;
+
 const sensorCategories = [
-  { name: "Fisiológicos", detail: "Señales vitales", count: "5/5", icon: "♥", active: true },
-  { name: "Bioquímicos", detail: "Glucosa", count: "1/1", icon: "◉", active: false },
-  { name: "Moleculares", detail: "Próximamente", count: "", icon: "✣", active: false },
-  { name: "Celulares", detail: "Próximamente", count: "", icon: "▦", active: false },
-  { name: "Neurológicos", detail: "Próximamente", count: "", icon: "⌁", active: false },
-  { name: "Imágenes", detail: "Próximamente", count: "", icon: "▧", active: false },
-  { name: "Wearables", detail: "Próximamente", count: "", icon: "⌚", active: false },
-  { name: "Ambientales", detail: "Entorno de misión", count: "1/1", icon: "◌", active: false },
-  { name: "Órganos", detail: "Próximamente", count: "", icon: "✦", active: false },
+  { name: "Physiological", detail: "Vital signs", count: "5/5", icon: "♥", active: true },
+  { name: "Biochemical", detail: "Glucose", count: "1/1", icon: "◉", active: false },
+  { name: "Molecular", detail: "Coming soon", count: "", icon: "✣", active: false },
+  { name: "Cellular", detail: "Coming soon", count: "", icon: "▦", active: false },
+  { name: "Neurological", detail: "Coming soon", count: "", icon: "⌁", active: false },
+  { name: "Imaging", detail: "Coming soon", count: "", icon: "▧", active: false },
+  { name: "Wearables", detail: "Coming soon", count: "", icon: "⌚", active: false },
+  { name: "Environmental", detail: "Mission environment", count: "1/1", icon: "◌", active: false },
+  { name: "Organs", detail: "Coming soon", count: "", icon: "✦", active: false },
 ];
 
 const statusLabels: Record<HealthStatus, string> = {
-  normal: "ESTADO NORMAL",
-  attention: "REQUIERE ATENCIÓN",
-  critical: "ESTADO CRÍTICO",
-  no_data: "ESPERANDO DATOS",
+  normal: "NORMAL STATUS",
+  attention: "REQUIRES ATTENTION",
+  critical: "CRITICAL STATUS",
+  no_data: "WAITING FOR DATA",
 };
 
 const sensorKeyByIndicator: Record<string, IndicatorKey> = {
@@ -58,13 +233,84 @@ const healthStatusPriority: Record<HealthStatus, number> = {
   critical: 3,
 };
 
-function formatDate(value?: string | null): string {
-  if (!value) return "Sin datos";
+const recommendationCopy: Record<string, { title: string; description: string }> = {
+  REC_CARDIO_01: {
+    title: "Reduce cardiovascular strain",
+    description:
+      "Your heart rate and blood pressure are elevated. Reduce physical activity and take slow, deep breaths for 5 minutes.",
+  },
+  REC_REST_01: {
+    title: "Rest immediately",
+    description:
+      "Your body is showing signs of strain. Reduce physical and cognitive demands now.",
+  },
+  REC_SLEEP_01: {
+    title: "Recover from sleep debt",
+    description:
+      "You have slept less than recommended and your fatigue level is high. Sleep loss can significantly affect decision-making and cognitive performance.",
+  },
+  REC_REST_02: {
+    title: "Schedule short breaks",
+    description:
+      "Although your condition is not critical, the combination of insufficient sleep and fatigue calls for early action.",
+  },
+  REC_GLUCOSE_01: {
+    title: "Check glucose levels",
+    description:
+      "Your glucose levels are outside the target range and combined with fatigue may affect your energy and concentration.",
+  },
+  REC_TEMP_01: {
+    title: "Regulate body temperature",
+    description:
+      "Your body temperature is outside the safe range. Treat this as a priority in the space environment.",
+  },
+  REC_GENERAL_01: {
+    title: "Review overall health",
+    description:
+      "Several indicators require attention. While none may be critical on its own, the combination increases risk.",
+  },
+};
+
+const indicatorNames: Record<string, string> = {
+  heart_rate: "Heart rate",
+  blood_pressure_sys: "Systolic blood pressure",
+  blood_pressure_dia: "Diastolic blood pressure",
+  temperature: "Temperature",
+  sleep_hours: "Sleep hours",
+  glucose: "Glucose",
+  fatigue_level: "Fatigue level",
+};
+
+function formatDate(value?: string | null, locale: Language = "en"): string {
+  if (!value) return translations[locale].noData;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(locale === "es" ? "es-ES" : "en-US");
+}
+
+function formatAlertSummary(
+  evaluation: EvaluationRecord,
+  priorityAction: string
+): string {
+  const outOfRangeIndicators = Object.entries(evaluation.indicator_statuses)
+    .filter(([, indicator]) => indicator.status !== "green")
+    .map(
+      ([key, indicator]) =>
+        `${indicatorNames[key] ?? key.replaceAll("_", " ")} (${indicator.status})`
+    );
+
+  if (outOfRangeIndicators.length === 0) {
+    return translations.en.genericAlertMessage;
+  }
+
+  return `Overall status: ${evaluation.overall_status.toUpperCase()}. Out-of-range indicators: ${outOfRangeIndicators.join(", ")}. Priority action: ${priorityAction}.`;
 }
 
 function App() {
+  const language: Language = "en";
+  const t = translations[language];
+  const sensorCategories = t.sensorCategoriesData;
+  const statusLabels = t.statusLabels;
   const [astronauts, setAstronauts] = useState<Astronaut[]>([]);
   const [selectedAstronautId, setSelectedAstronautId] = useState<number | null>(
     null
@@ -103,15 +349,13 @@ function App() {
     };
 
     const handleOffline = () => {
-      setSyncMessage(
-        "Sin Internet: se intentará usar la API local; si no responde, los datos quedan pendientes en este dispositivo."
-      );
+      setSyncMessage(t.offlineMessage);
     };
 
     const handleOnline = async () => {
       const networkAvailable = navigator.onLine;
       if (networkAvailable) {
-        setSyncMessage("Conexión disponible. Sincronizando mediciones...");
+        setSyncMessage(t.onlineMessage);
       }
 
       try {
@@ -119,15 +363,13 @@ function App() {
         await updatePendingCount();
         if (syncedCount > 0) {
           setRefreshToken((token) => token + 1);
-          setSyncMessage(`${syncedCount} medición(es) sincronizada(s).`);
+          setSyncMessage(t.syncSuccess(syncedCount));
         } else if (networkAvailable) {
           setSyncMessage(null);
         }
       } catch (cause) {
         setError(
-          cause instanceof Error
-            ? cause.message
-            : "No se pudieron sincronizar las mediciones pendientes."
+          cause instanceof Error ? cause.message : t.syncFailure
         );
         await updatePendingCount();
       }
@@ -149,7 +391,7 @@ function App() {
       window.removeEventListener("focus", handleOnline);
       window.clearInterval(retryInterval);
     };
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     let active = true;
@@ -177,11 +419,7 @@ function App() {
       })
       .catch((cause: unknown) => {
         if (active) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "No se pudo cargar la tripulación."
-          );
+          setError(cause instanceof Error ? cause.message : t.loadCrewFailure);
         }
       })
       .finally(() => {
@@ -191,7 +429,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     if (selectedAstronautId === null) {
@@ -224,11 +462,7 @@ function App() {
       })
       .catch((cause: unknown) => {
         if (active) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "No se pudieron cargar los datos de salud."
-          );
+          setError(cause instanceof Error ? cause.message : t.loadHealthFailure);
         }
       })
       .finally(() => {
@@ -238,7 +472,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, [selectedAstronautId, refreshToken]);
+  }, [selectedAstronautId, refreshToken, language]);
 
   const latestMeasurement = measurements[0];
   const latestEvaluation = evaluations.find(
@@ -294,14 +528,14 @@ function App() {
     return [
       {
         id: "heart-rate",
-        label: "Frecuencia cardíaca",
+        label: t.heartRate,
         unit: "bpm",
         value: values?.heart_rate ?? null,
         status: mapStatus(statuses.heart_rate?.status),
       },
       {
         id: "blood-pressure",
-        label: "Presión arterial",
+        label: t.bloodPressure,
         unit: "mmHg",
         value: values
           ? `${values.blood_pressure_sys}/${values.blood_pressure_dia}`
@@ -310,34 +544,34 @@ function App() {
       },
       {
         id: "temperature",
-        label: "Temperatura",
+        label: t.temperature,
         unit: "°C",
         value: values?.temperature ?? null,
         status: mapStatus(statuses.temperature?.status),
       },
       {
         id: "sleep-hours",
-        label: "Horas de sueño",
+        label: t.sleepHours,
         unit: "h",
         value: values?.sleep_hours ?? null,
         status: mapStatus(statuses.sleep_hours?.status),
       },
       {
         id: "glucose",
-        label: "Glucosa",
+        label: t.glucose,
         unit: "mg/dL",
         value: values?.glucose ?? null,
         status: mapStatus(statuses.glucose?.status),
       },
       {
         id: "fatigue-level",
-        label: "Nivel de fatiga",
+        label: t.fatigueLevel,
         unit: "/10",
         value: values?.fatigue_level ?? null,
         status: mapStatus(statuses.fatigue_level?.status),
       },
     ];
-  }, [latestMeasurement, latestEvaluation]);
+  }, [latestMeasurement, latestEvaluation, t]);
 
   const history = useMemo(
     () =>
@@ -356,21 +590,21 @@ function App() {
 
   const alerts = recentAlerts.map(([key, evaluation]) => {
     const recommendation = evaluation.recommendations[0];
+    const copy = recommendation
+      ? recommendationCopy[recommendation.id ?? ""]
+      : undefined;
+    const title = copy?.title ?? t.alertHealth;
     return {
       key,
       id: evaluation.id,
-      title: recommendation?.title ?? "Alerta de salud",
-      message: evaluation.summary || "Un indicador de salud requiere atención.",
+      title,
+      message: formatAlertSummary(evaluation, title),
       severity:
         evaluation.overall_status === "red"
           ? ("critical" as const)
           : ("attention" as const),
-      createdAt: formatDate(evaluation.created_at),
-      recommendation:
-        recommendation?.message ??
-        recommendation?.description ??
-        recommendation?.actions?.join(" ") ??
-        "Revisa las mediciones de salud recientes.",
+      createdAt: formatDate(evaluation.created_at, language),
+      recommendation: copy?.description ?? t.alertRecommendation,
     };
   });
 
@@ -390,9 +624,7 @@ function App() {
       );
     } catch (cause) {
       setAlertActionError(
-        cause instanceof Error
-          ? cause.message
-          : "No se pudo marcar la alerta como realizada."
+        cause instanceof Error ? cause.message : t.failedAckAlert
       );
     } finally {
       setAcknowledgingAlertId(null);
@@ -421,19 +653,13 @@ function App() {
       setAstronautRole("");
       setShowCreateAstronaut(false);
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "No se pudo registrar al tripulante."
-      );
+      setError(cause instanceof Error ? cause.message : t.createAstronautFailure);
     } finally {
       setIsCreatingAstronaut(false);
     }
   };
 
-  const connectionStatus = isApiAvailable
-    ? "API local activa"
-    : "API local desconectada";
+  const connectionStatus = isApiAvailable ? t.apiOnline : t.apiOffline;
   const environment: Environment =
     latestMeasurement?.environment ??
     selectedAstronaut?.current_environment ??
@@ -458,9 +684,7 @@ function App() {
       } catch (cause) {
         if (!active) return;
         setSimulatorError(
-          cause instanceof Error
-            ? cause.message
-            : "No se pudo generar la lectura simulada."
+          cause instanceof Error ? cause.message : t.syncFailure
         );
         setIsSimulatorRunning(false);
       }
@@ -516,11 +740,11 @@ function App() {
 
         <div className="sidebar-monitor">
           <span className="live-dot" />
-          <span>MONITOREO DE MISIÓN</span>
+          <span>{t.connectionMonitoring}</span>
         </div>
 
-        <div className="sensor-sidebar-title">CATEGORÍAS DE SENSORES</div>
-        <nav className="sensor-category-list" aria-label="Categorías de sensores">
+        <div className="sensor-sidebar-title">{t.sensorCategories}</div>
+        <nav className="sensor-category-list" aria-label={t.sensorCategories}>
           {sensorCategories.map((category) => (
             <div
               key={category.name}
@@ -556,16 +780,14 @@ function App() {
       <div className="main-screen">
         <header className="app-header">
           <div className="header-title">
-            <p className="app-eyebrow">TELEMETRÍA BIOMÉDICA · EN VIVO</p>
-            <h1>Centro de salud</h1>
-            <p className="app-subtitle">
-              Monitoreo fisiológico de la tripulación
-            </p>
+            <p className="app-eyebrow">{t.telemetryLive}</p>
+            <h1>{t.healthCenter}</h1>
+            <p className="app-subtitle">{t.crewMonitoring}</p>
           </div>
           <div className="header-actions">
             {astronauts.length > 0 && (
               <label className="crew-picker">
-                <span>TRIPULANTE</span>
+                <span>{t.crewMember}</span>
                 <select
                   value={selectedAstronautId ?? ""}
                   onChange={(event) => {
@@ -594,7 +816,7 @@ function App() {
               onClick={() => setShowCreateAstronaut((show) => !show)}
               className="button button-secondary"
             >
-              {showCreateAstronaut ? "Cancelar" : "＋ Tripulante"}
+              {showCreateAstronaut ? t.cancel : t.addCrew}
             </button>
             {selectedAstronautId !== null && (
               <button
@@ -602,7 +824,7 @@ function App() {
                 onClick={() => setIsMeasurementFormOpen(true)}
                 className="button button-primary"
               >
-                ＋ Medición
+                {t.addMeasurement}
               </button>
             )}
           </div>
@@ -611,7 +833,7 @@ function App() {
         {showCreateAstronaut && (
           <form onSubmit={handleCreateAstronaut} className="new-astronaut-form">
             <label className="form-field">
-              Nombre
+              {t.name}
               <input
                 required
                 value={astronautName}
@@ -619,7 +841,7 @@ function App() {
               />
             </label>
             <label className="form-field">
-              Rol
+              {t.role}
               <input
                 required
                 value={astronautRole}
@@ -631,7 +853,7 @@ function App() {
               disabled={isCreatingAstronaut}
               className="button button-primary"
             >
-              {isCreatingAstronaut ? "Guardando..." : "Registrar"}
+              {isCreatingAstronaut ? t.saving : t.register}
             </button>
           </form>
         )}
@@ -643,30 +865,24 @@ function App() {
           )}
           {pendingCount > 0 && (
             <p role="status" className="sync-message is-pending">
-              {pendingCount} medición(es) pendiente(s) de enviar al servidor central.
+              {t.pendingSyncSummary(pendingCount)}
             </p>
           )}
           {!loadingAstronauts && astronauts.length === 0 && !error && (
-            <p className="data-empty">
-              No hay tripulantes registrados. Usa “＋ Tripulante” para comenzar.
-            </p>
+            <p className="data-empty">{t.emptyCrew}</p>
           )}
 
           {import.meta.env.DEV && (
             <section className="simulator-panel" aria-label="Simulador local">
               <div className="simulator-copy">
-                <p className="section-eyebrow">MODO DEMO LOCAL</p>
+                <p className="section-eyebrow">{t.localDemoMode}</p>
                 <strong>
-                  {isSimulatorRunning
-                    ? "Simulando telemetría"
-                    : "Simulador de sensores"}
+                  {isSimulatorRunning ? t.simulatingTelemetry : t.sensorSimulator}
                 </strong>
-                <small>
-                  Datos sintéticos; no son lecturas reales ni evaluación clínica.
-                </small>
+                <small>{t.syntheticDataWarning}</small>
               </div>
               <label className="simulator-profile">
-                <span>PERFIL</span>
+                <span>{t.profile}</span>
                 <select
                   value={simulatorProfile}
                   disabled={isSimulatorRunning}
@@ -681,9 +897,9 @@ function App() {
                     setSimulatorProfile(event.target.value as DemoProfile);
                   }}
                 >
-                  <option value="normal">Normal</option>
-                  <option value="attention">Atención</option>
-                  <option value="critical">Crítico</option>
+                  <option value="normal">{t.normal}</option>
+                  <option value="attention">{t.attention}</option>
+                  <option value="critical">{t.critical}</option>
                 </select>
               </label>
               <button
@@ -704,7 +920,7 @@ function App() {
                   setIsSimulatorRunning((running) => !running);
                 }}
               >
-                {isSimulatorRunning ? "Pausar demo" : "Iniciar demo"}
+                {isSimulatorRunning ? t.pauseDemo : t.startDemo}
               </button>
               {simulatorError && (
                 <p className="simulator-error" role="alert">
@@ -717,48 +933,51 @@ function App() {
           <section className={`diagnostic-banner status-${overallStatus}`}>
             <span className="diagnostic-symbol">✧</span>
             <div className="diagnostic-copy">
-              <p className="section-eyebrow">ANÁLISIS AUTOMÁTICO</p>
+              <p className="section-eyebrow">{t.automaticAnalysis}</p>
               <h2>{statusLabels[overallStatus]}</h2>
               <p>
-                {latestEvaluation?.summary ??
-                  "Registra una medición para generar el análisis de salud."}
+                {latestEvaluation?.summary ?? t.waitingForMeasurement}
               </p>
             </div>
             <div className="diagnostic-meta">
-              <span>{environment === "spacecraft" ? "NAVE ESPACIAL" : "BASE LUNAR"}</span>
-              <small>Actualizado: {formatDate(latestMeasurement?.recorded_at)}</small>
+              <span>
+                {environment === "spacecraft"
+                  ? t.environmentSpacecraft
+                  : t.environmentLunarBase}
+              </span>
+              <small>
+                {t.updated} {formatDate(latestMeasurement?.recorded_at, language)}
+              </small>
             </div>
             <button
               type="button"
               className="refresh-button"
               onClick={() => setRefreshToken((token) => token + 1)}
-              aria-label="Actualizar análisis de salud"
-              title="Actualizar datos"
+              aria-label={t.automaticAnalysis}
+              title={t.automaticAnalysis}
             >
               ↻
             </button>
           </section>
 
-          {loadingData && <p className="data-loading">Cargando datos de salud...</p>}
+          {loadingData && <p className="data-loading">{t.loadingHealthData}</p>}
 
           <div className="dashboard-layout">
             <section className="body-panel">
               <div className="body-panel-heading">
                 <div>
-                  <p className="section-eyebrow">MAPA CORPORAL DE SENSORES</p>
-                  <h2>Traje de astronauta</h2>
-                  <p className="section-description">
-                    Resumen persistente de alertas biométricas
-                  </p>
+                  <p className="section-eyebrow">{t.sensorCategories}</p>
+                  <h2>{t.bodyMapTitle}</h2>
+                  <p className="section-description">{t.bodyMapSummary}</p>
                 </div>
                 <span className="live-badge"><i /> LIVE</span>
               </div>
               <SensorBodyMap statuses={sensorStatuses} />
               <div className="body-legend">
-                <span><i className="legend-normal" /> Normal</span>
-                <span><i className="legend-attention" /> Atención</span>
-                <span><i className="legend-critical" /> Crítico</span>
-                <span><i className="legend-no-data" /> Sin datos</span>
+                <span><i className="legend-normal" /> {t.legendNormal}</span>
+                <span><i className="legend-attention" /> {t.legendAttention}</span>
+                <span><i className="legend-critical" /> {t.legendCritical}</span>
+                <span><i className="legend-no-data" /> {t.legendNoData}</span>
               </div>
             </section>
 
@@ -766,13 +985,13 @@ function App() {
               <IndicatorsGrid indicators={indicators} />
               <div className="trend-grid">
                 <TrendCard
-                  title="Frecuencia cardíaca"
+                  title={t.heartRate}
                   unit="bpm"
                   color="#ff5470"
                   values={heartRateValues}
                 />
                 <TrendCard
-                  title="Glucosa"
+                  title={t.glucose}
                   unit="mg/dL"
                   color="#22d3ee"
                   values={glucoseValues}
@@ -797,8 +1016,8 @@ function App() {
             onSubmitted={(synced) => {
               setSyncMessage(
                 synced
-                  ? "Medición guardada y sincronizada."
-                  : "Medición guardada en este dispositivo; se enviará al recuperar la conexión."
+                  ? "Measurement saved and synchronized."
+                  : "Measurement saved on this device; it will be sent when the connection is restored."
               );
               setPendingCount((count) => count + (synced ? 0 : 1));
               setRefreshToken((token) => token + 1);

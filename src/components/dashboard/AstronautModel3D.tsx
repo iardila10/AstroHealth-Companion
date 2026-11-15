@@ -570,7 +570,7 @@ function AstronautModel3D({ statuses }: AstronautModel3DProps) {
         powerPreference: "low-power",
       });
     } catch {
-      setRenderError("No se pudo iniciar WebGL para mostrar el modelo 3D.");
+      setRenderError("Could not start WebGL to display the 3D model.");
       return;
     }
 

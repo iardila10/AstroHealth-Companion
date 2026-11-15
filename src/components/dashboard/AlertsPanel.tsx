@@ -22,13 +22,13 @@ const severityConfig: Record<
   { label: string; color: string; background: string; border: string }
 > = {
   attention: {
-    label: "ATENCIÓN",
+    label: "ATTENTION",
     color: "text-amber-400",
     background: "bg-amber-500/10",
     border: "border-amber-500/30",
   },
   critical: {
-    label: "CRÍTICO",
+    label: "CRITICAL",
     color: "text-rose-400",
     background: "bg-rose-500/10",
     border: "border-rose-500/30",
@@ -42,13 +42,13 @@ function AlertsPanel({
   onAcknowledge,
 }: AlertsPanelProps) {
   return (
-    <aside className="alerts-panel" aria-label="Alertas de salud pendientes">
+    <aside className="alerts-panel" aria-label="Pending health alerts">
       <div className="alerts-heading">
         <div>
-          <p className="section-eyebrow">CENTRO DE ALERTAS</p>
-          <h2 className="section-title">Alertas pendientes</h2>
+          <p className="section-eyebrow">ALERT CENTER</p>
+          <h2 className="section-title">Pending alerts</h2>
           <p className="section-description">
-            Recomendaciones por completar
+            Recommendations to complete
           </p>
         </div>
         <div className="alerts-total" aria-live="polite">
@@ -66,8 +66,8 @@ function AlertsPanel({
       <div className="alert-list" aria-live="polite">
         {alerts.length === 0 ? (
           <div className="alerts-empty">
-            <p className="alerts-empty-title">Sin alertas pendientes</p>
-            <p>Las nuevas alertas aparecerán aquí.</p>
+            <p className="alerts-empty-title">No pending alerts</p>
+            <p>New alerts will appear here.</p>
           </div>
         ) : (
           alerts.map((alert) => {
@@ -94,7 +94,7 @@ function AlertsPanel({
                 <p className="alert-message">{alert.message}</p>
 
                 <div className="alert-recommendation">
-                  <p className="section-eyebrow">ACCIÓN SUGERIDA</p>
+                  <p className="section-eyebrow">SUGGESTED ACTION</p>
                   <p>{alert.recommendation}</p>
                 </div>
 
@@ -105,9 +105,9 @@ function AlertsPanel({
                   className="alert-acknowledge"
                   disabled={acknowledgingAlertId !== null}
                   onClick={() => onAcknowledge(alert.id)}
-                  aria-label={`Marcar como realizada: ${alert.title}`}
+                  aria-label={`Mark as completed: ${alert.title}`}
                 >
-                  {isAcknowledging ? "Guardando..." : "✓ Marcar como realizada"}
+                  {isAcknowledging ? "Saving..." : "✓ Mark as completed"}
                 </button>
               </article>
             );

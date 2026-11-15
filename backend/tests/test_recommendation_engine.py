@@ -27,7 +27,7 @@ def test_green_evaluation_has_no_recommendations():
 
     assert result.overall_status == "green"
     assert result.recommendations == []
-    assert "rangos normales" in result.summary
+    assert "within normal ranges" in result.summary
 
 
 def test_cardio_rule_generates_recommendations():
@@ -54,7 +54,7 @@ def test_cardio_rule_generates_recommendations():
     assert "REC_REST_01" in recommendation_ids
 
     assert result.indicator_statuses["heart_rate"].explanation is not None
-    assert result.summary.startswith("Estado general: RED.")
+    assert result.summary.startswith("Overall status: RED.")
 
 
 def test_fallback_recommendation_for_single_indicator():

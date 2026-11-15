@@ -26,9 +26,9 @@ function TrendCard({ title, unit, color, values }: TrendCardProps) {
       <div className="trend-card-heading">
         <div>
           <h3>{title}</h3>
-          <span>Últimas mediciones · {unit}</span>
+            <span>Latest measurements · {unit}</span>
         </div>
-        <span className="trend-live">HISTORIAL</span>
+          <span className="trend-live">HISTORY</span>
       </div>
       {recentValues.length > 0 ? (
         <svg
@@ -36,7 +36,7 @@ function TrendCard({ title, unit, color, values }: TrendCardProps) {
           viewBox="0 0 100 42"
           preserveAspectRatio="none"
           role="img"
-          aria-label={`Tendencia de ${title}`}
+            aria-label={`Trend for ${title}`}
         >
           <path className="trend-gridline" d="M0 8 H100 M0 21 H100 M0 34 H100" />
           <polyline
@@ -48,10 +48,10 @@ function TrendCard({ title, unit, color, values }: TrendCardProps) {
           />
         </svg>
       ) : (
-        <div className="trend-empty">El historial aparecerá al registrar mediciones.</div>
+        <div className="trend-empty">The history will appear after recording measurements.</div>
       )}
       <div className="trend-card-footer">
-        <span>{recentValues.length} registros</span>
+        <span>{recentValues.length} records</span>
         {recentValues.length > 0 && (
           <strong>
             {recentValues[recentValues.length - 1]} {unit}

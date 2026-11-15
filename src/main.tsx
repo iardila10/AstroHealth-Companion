@@ -6,7 +6,7 @@ import "./styles.css";
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
-  throw new Error('No se encontró el elemento raíz "#root".');
+  throw new Error('Root element "#root" was not found.');
 }
 
 createRoot(rootElement).render(

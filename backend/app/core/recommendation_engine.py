@@ -29,7 +29,7 @@ class RecommendationEngine:
         self._recommendations = data.get("recommendations", {})
         self._indicator_explanations = data.get("indicator_explanations", {})
 
-        # Combination rules (para saber qué recommendation_ids usar)
+        # Combination rules (to determine which recommendation IDs to use)
         rules_path = self.knowledge_dir / "combination_rules.yaml"
         with open(rules_path, "r", encoding="utf-8") as f:
             rules_data = yaml.safe_load(f)
@@ -134,20 +134,29 @@ class RecommendationEngine:
         recommendations: List[Recommendation]
     ) -> str:
         if overall_status == "green":
-            return "Todos los indicadores se encuentran dentro de rangos normales. Continúa con el monitoreo rutinario."
+            return "All indicators are within normal ranges. Continue routine monitoring."
 
+        indicator_names = {
+            "heart_rate": "Heart rate",
+            "blood_pressure_sys": "Systolic blood pressure",
+            "blood_pressure_dia": "Diastolic blood pressure",
+            "temperature": "Temperature",
+            "sleep_hours": "Sleep hours",
+            "glucose": "Glucose",
+            "fatigue_level": "Fatigue level",
+        }
         problems = [
-            f"{ind.replace('_', ' ').title()} ({obj.status})"
+            f"{indicator_names.get(ind, ind.replace('_', ' ').title())} ({obj.status})"
             for ind, obj in statuses.items() if obj.status != "green"
         ]
 
         problem_text = ", ".join(problems)
-        rec_text = recommendations[0].title if recommendations else "Revisar protocolo de salud"
+        rec_text = recommendations[0].title if recommendations else "Review the health protocol"
 
         return (
-            f"Estado general: {overall_status.upper()}. "
-            f"Indicadores fuera de rango: {problem_text}. "
-            f"Acción prioritaria: {rec_text}."
+            f"Overall status: {overall_status.upper()}. "
+            f"Out-of-range indicators: {problem_text}. "
+            f"Priority action: {rec_text}."
         )
 
 
