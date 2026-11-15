@@ -1,5 +1,5 @@
 import { useEffect, useState, type SubmitEvent } from "react";
-import X from "lucide-react/icons/x";
+import { X } from "lucide-react";
 import type { Environment, MeasurementInput } from "../../types/health";
 import {
   submitMeasurement,

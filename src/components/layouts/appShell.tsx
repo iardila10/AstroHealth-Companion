@@ -1,7 +1,7 @@
 
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
-import { Header } from './Header';
+import { Header } from './header';
 import { useUIStore } from '../../stores/useUIStore';
 
 export const AppShell = () => {
